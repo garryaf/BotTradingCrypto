@@ -71,15 +71,19 @@ Prinsip fundamental sistem adalah: **AI memberikan analisis dan usulan sinyal, n
 ## 2. Prinsip-Prinsip Desain Utama
 
 1. **Modular Monolith First (ADR-001):**
-   Seluruh modul domain dibangun di dalam satu basis kode Python terpadu dengan batasan modul yang jelas (*cohesive domain boundaries*). Menghindari kompleksitas jaringan mikroservis (RPC internal, *service discovery*, konsistensi terdistribusi) pada tahap awal.
+   Seluruh modul domain dibangun dengan batasan modul yang jelas (*cohesive domain boundaries*). Menghindari kompleksitas jaringan mikroservis (RPC internal, *service discovery*, konsistensi terdistribusi) pada tahap awal.
 2. **PostgreSQL Sebagai Sumber Kebenaran Tunggal (ADR-002):**
    Seluruh data transaksi, sinyal, evaluasi risiko, posisi virtual, portofolio, dan log audit disimpan secara relasional dengan integritas transaksi ACID (*Atomicity, Consistency, Isolation, Durability*).
 3. **Redis Berstatus Opsional (ADR-003):**
    Redis bukan prasyarat wajib untuk MVP. Polling in-memory dan database PostgreSQL sudah memadai untuk beban kerja single-operator pada MacBook M1 Pro. Redis hanya diintegrasikan jika ada kebutuhan terukur untuk antrean background terdistribusi atau rate-limiting kecepatan tinggi.
 4. **Simulasi Tanpa Risiko / Paper Trading First (ADR-004):**
    Sistem dirancang secara mendasar untuk *paper trading* dan *backtesting*. Tidak ada fungsionalitas penandatanganan transaksi dengan kunci privat (*private key*) nyata pada fase ini.
-5. **Solana First (ADR-005):**
-   Spesifikasi ingestion dan model data dioptimalkan untuk karakteristik transaksi Solana (SPL Token, Account Model, DEX AMM Raydium/Orca).
+5. **Solana & Bybit Hybrid Data Engine (ADR-005):**
+   Spesifikasi ingestion dan model data dioptimalkan untuk instrumen likuiditas utama Bybit Spot dan karakteristik on-chain Solana (SPL Token, Account Model, DEX AMM Raydium/Orca).
+6. **Arsitektur Hibrida Python + Rust + React.js (ADR-006):**
+   - **Frontend:** **React.js** melalui framework **Next.js 15 (TypeScript + Tailwind CSS)** untuk antarmuka visual responsif, grafik candlestick interaktif, dan status portofolio.
+   - **AI Orchestration & API Layer (Python FastAPI):** Menjalankan Hermes Multi-Agent, Dynamic AI Skill System (`.agents/skills/`), adapter AI Model Gateway (OpenRouter, 9Route), serta antarmuka REST API dan Telegram bot.
+   - **High-Speed Trading & Safety Engine (Rust):** Menjalankan WebSocket ingestion berkecepatan tinggi, decoding transaksi on-chain Solana, Deterministic Risk Gate sub-milidetik, dan matching engine Paper Broker bebas jeda garbage collection.
 
 ---
 
