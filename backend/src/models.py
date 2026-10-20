@@ -178,7 +178,8 @@ class RiskCheck(SQLModel, table=True):
     spread_check: bool
     stop_loss_check: bool
     balance_lot_check: bool
-    circuit_breaker_check: bool
+    max_positions_check: bool  # ROADMAP.md pintu 8 ("Batas Posisi Terbuka Maksimal")
+    circuit_breaker_check: bool  # DATA_DICTIONARY.md pintu 8 (Circuit Breaker/Freeze) — kept as a distinct gate
     data_freshness_check: bool
     rejection_reasons: list = Field(default_factory=list, sa_column=Column(JSONB))
     evaluated_at: datetime = Field(default_factory=_utcnow)

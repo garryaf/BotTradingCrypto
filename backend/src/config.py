@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +20,12 @@ class Settings(BaseSettings):
     nineroute_base_url: str = ""
     nineroute_api_key: str = ""
     nineroute_default_model: str = "google/gemini-flash-1.5"
+
+    initial_paper_capital_usd: Decimal = Decimal("10000.00")
+    max_risk_per_trade_pct: Decimal = Decimal("0.005")
+    daily_loss_limit_pct: Decimal = Decimal("0.02")
+    max_drawdown_limit_pct: Decimal = Decimal("0.08")
+    max_spread_pct: Decimal = Decimal("0.0008")
 
     @property
     def solana_rpc_url(self) -> str:

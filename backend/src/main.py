@@ -9,6 +9,7 @@ from .db import engine
 from .ingestion.aggregator import run_aggregator
 from .ingestion.binance import run_binance_ingestion
 from .ingestion.solana import run_solana_ingestion
+from .risk.engine import run_risk_engine_loop
 
 
 @asynccontextmanager
@@ -18,6 +19,7 @@ async def lifespan(_: FastAPI):
         asyncio.create_task(run_solana_ingestion()),
         asyncio.create_task(run_aggregator()),
         asyncio.create_task(run_hermes_loop()),
+        asyncio.create_task(run_risk_engine_loop()),
     ]
     yield
     for task in tasks:
