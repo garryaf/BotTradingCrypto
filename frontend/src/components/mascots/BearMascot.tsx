@@ -13,10 +13,14 @@ export function BearMascot({ className }: { className?: string }) {
         fill="currentColor"
         {...outline}
       />
+      {/* thin comic-shine stroke along the back, instead of a flat highlight blob */}
       <path
-        d="M72 100 C84 88 100 82 116 84 C100 90 88 100 82 114 C78 124 78 134 82 142 C68 132 62 114 72 100 Z"
-        fill="white"
-        opacity={0.2}
+        d="M66 160 C50 144 46 120 54 100 C62 82 78 70 98 66"
+        fill="none"
+        stroke="white"
+        strokeWidth={3}
+        strokeLinecap="round"
+        opacity={0.75}
       />
 
       {/* left arm, swiping, jagged fur edge */}
@@ -61,6 +65,17 @@ export function BearMascot({ className }: { className?: string }) {
       <path
         d="M62 94 C56 64 80 44 110 44 C140 44 164 64 158 94 C154 116 134 130 110 130 C86 130 66 116 62 94 Z"
         fill="currentColor"
+        {...outline}
+      />
+
+      {/* fur-spike crown along the top of the head */}
+      <path
+        d="M80 48 L86 36 L92 50 L100 34 L108 50 L116 34 L122 50 L130 36 L136 48"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         {...outline}
       />
 

@@ -3,9 +3,12 @@ export function BullMascot({ className }: { className?: string }) {
   const outline = { stroke: "black", strokeWidth: 4, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
   return (
     <svg viewBox="0 0 220 220" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* front legs, planted wide and ready to charge */}
-      <path d="M66 176 C60 190 62 202 76 206 C88 210 96 200 92 186 Z" fill="currentColor" {...outline} />
-      <path d="M154 176 C160 190 158 202 144 206 C132 210 124 200 128 186 Z" fill="currentColor" {...outline} />
+      {/* front legs — sturdy columns tapering to split (cloven) hooves */}
+      <path d="M58 168 C54 182 54 196 60 208 L92 208 C98 196 98 182 94 168 Z" fill="currentColor" {...outline} />
+      <path d="M146 168 C142 182 142 196 148 208 L180 208 C186 196 186 182 182 168 Z" fill="currentColor" {...outline} />
+      <path d="M56 202 L96 202 L94 214 C90 218 62 218 58 214 Z" fill="black" opacity={0.75} />
+      <path d="M144 202 L184 202 L182 214 C178 218 150 218 146 214 Z" fill="black" opacity={0.75} />
+      <path d="M76 203 L76 212 M164 203 L164 212" stroke="#0d1016" strokeWidth={2.5} />
 
       {/* broad muscular shoulders tapering to chest */}
       <path
@@ -13,24 +16,31 @@ export function BullMascot({ className }: { className?: string }) {
         fill="currentColor"
         {...outline}
       />
+      {/* thin comic-shine stroke along the top, instead of a flat highlight blob */}
       <path
-        d="M68 104 C80 90 96 82 112 82 C96 90 84 102 78 118 C74 128 74 138 78 146 C64 136 58 118 68 104 Z"
-        fill="white"
-        opacity={0.22}
+        d="M60 112 C70 90 88 78 110 76 C92 84 78 98 72 118"
+        fill="none"
+        stroke="white"
+        strokeWidth={3}
+        strokeLinecap="round"
+        opacity={0.75}
       />
+      {/* chest muscle crease */}
+      <path d="M92 150 C100 138 100 124 94 112" stroke="black" strokeWidth={2.5} fill="none" opacity={0.25} />
+      <path d="M128 150 C120 138 120 124 126 112" stroke="black" strokeWidth={2.5} fill="none" opacity={0.25} />
 
       {/* ears */}
       <path d="M62 86 L46 70 L68 78 Z" fill="currentColor" {...outline} />
       <path d="M158 86 L174 70 L152 78 Z" fill="currentColor" {...outline} />
 
-      {/* symmetric dramatic "C" horns, tips hooking in toward the brow */}
+      {/* sharp hooked horns, tapering to a point */}
       <path
-        d="M72 78 C54 68 44 48 52 26 C64 36 68 54 66 70 C76 58 90 52 104 54 C88 62 76 70 72 86 Z"
+        d="M72 78 C52 66 40 44 50 20 C54 34 56 48 62 60 C64 48 70 38 80 32 C96 28 110 36 116 50 C100 50 86 56 76 68 C74 72 73 76 72 86 Z"
         fill="currentColor"
         {...outline}
       />
       <path
-        d="M148 78 C166 68 176 48 168 26 C156 36 152 54 154 70 C144 58 130 52 116 54 C132 62 144 70 148 86 Z"
+        d="M148 78 C168 66 180 44 170 20 C166 34 164 48 158 60 C156 48 150 38 140 32 C124 28 110 36 104 50 C120 50 134 56 144 68 C146 72 147 76 148 86 Z"
         fill="currentColor"
         {...outline}
       />
