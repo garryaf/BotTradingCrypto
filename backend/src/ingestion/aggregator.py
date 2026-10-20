@@ -14,8 +14,7 @@ BUCKETS = [
     ("H1", "date_trunc('hour', snapshot_time)", "4 hours"),
 ]
 
-UPSERT_SQL = text(
-    """
+UPSERT_SQL_TEMPLATE = """
     INSERT INTO market_ohlcv (id, token_id, interval, bucket_time, open, high, low, close, sample_count)
     SELECT gen_random_uuid(), token_id, :label, bucket,
            (array_agg(price_usd ORDER BY snapshot_time ASC))[1],
@@ -25,21 +24,23 @@ UPSERT_SQL = text(
     FROM (
         SELECT token_id, snapshot_time, price_usd, (__BUCKET__) AS bucket
         FROM market_snapshots
-        WHERE is_stale = false AND snapshot_time >= now() - (:lookback)::interval
+        WHERE is_stale = false AND snapshot_time >= now() - interval '__LOOKBACK__'
     ) s
     GROUP BY token_id, bucket
     ON CONFLICT (token_id, interval, bucket_time) DO UPDATE SET
         high = excluded.high, low = excluded.low, close = excluded.close,
         sample_count = excluded.sample_count
     """
-)
 
 
 async def run_aggregator() -> None:
     while True:
         async with async_session_factory() as session:
             for label, bucket_sql, lookback in BUCKETS:
-                sql = UPSERT_SQL.text.replace("__BUCKET__", bucket_sql)
-                await session.execute(text(sql), {"label": label, "lookback": lookback})
+                # lookback/bucket_sql come from the fixed BUCKETS list above, not user
+                # input — safe to inline rather than bind (asyncpg can't bind a plain
+                # string into an ::interval cast).
+                sql = UPSERT_SQL_TEMPLATE.replace("__BUCKET__", bucket_sql).replace("__LOOKBACK__", lookback)
+                await session.execute(text(sql), {"label": label})
             await session.commit()
         await asyncio.sleep(POLL_INTERVAL_SEC)
