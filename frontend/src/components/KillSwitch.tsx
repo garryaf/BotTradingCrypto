@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Power, ShieldCheck } from "lucide-react";
+import { apiPost } from "@/lib/api";
 
 const HOLD_MS = 1200;
 
@@ -28,6 +29,7 @@ export function KillSwitch() {
         setEngaged(true);
         setOpen(false);
         stopHold();
+        apiPost("/api/v1/control/kill").catch(() => {});
         return;
       }
       frame.current = requestAnimationFrame(tick);
@@ -40,7 +42,10 @@ export function KillSwitch() {
       <motion.button
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        onClick={() => setEngaged(false)}
+        onClick={() => {
+          setEngaged(false);
+          apiPost("/api/v1/control/resume").catch(() => {});
+        }}
         className="flex items-center gap-2 rounded-lg border border-profit/30 bg-profit/10 px-3.5 py-2 text-xs font-medium text-profit"
       >
         <ShieldCheck size={14} />

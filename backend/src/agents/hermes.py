@@ -166,9 +166,12 @@ async def run_hermes_loop() -> None:
     if not gateway_is_configured():
         logger.warning("Hermes loop idle: no AI Model Gateway provider configured (OPENROUTER_API_KEY / NINEROUTE_API_KEY)")
         return
+    from ..risk.engine import is_paused
+
     async with httpx.AsyncClient() as client:
         while True:
             async with async_session_factory() as session:
-                for symbol in SYMBOLS:
-                    await run_hermes_cycle(session, client, symbol)
+                if not await is_paused(session):
+                    for symbol in SYMBOLS:
+                        await run_hermes_cycle(session, client, symbol)
             await asyncio.sleep(CYCLE_INTERVAL_SEC)

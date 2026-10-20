@@ -37,11 +37,12 @@ from .ledger import next_snapshot
 
 logger = logging.getLogger("risk.engine")
 
-CYCLE_INTERVAL_SEC = 15
+CYCLE_INTERVAL_SEC = 5
 CIRCUIT_BREAKER_KEY = "CIRCUIT_BREAKER_ACTIVE"
+PAUSED_KEY = "TRADING_PAUSED"
 
 
-async def _latest_portfolio(session) -> PortfolioSnapshot:
+async def get_latest_portfolio(session) -> PortfolioSnapshot:
     snap = (
         await session.exec(select(PortfolioSnapshot).order_by(PortfolioSnapshot.snapshot_time.desc()))
     ).first()
@@ -65,6 +66,11 @@ async def _circuit_breaker_active(session) -> bool:
     return bool(row and row.value == "true")
 
 
+async def is_paused(session) -> bool:
+    row = (await session.exec(select(UserSetting).where(UserSetting.key == PAUSED_KEY))).first()
+    return bool(row and row.value == "true")
+
+
 async def _set_circuit_breaker(session, active: bool, reason: str) -> None:
     row = (await session.exec(select(UserSetting).where(UserSetting.key == CIRCUIT_BREAKER_KEY))).first()
     was_active = bool(row and row.value == "true")
@@ -78,7 +84,7 @@ async def _set_circuit_breaker(session, active: bool, reason: str) -> None:
     await session.commit()
 
 
-async def _open_positions_count(session) -> int:
+async def count_open_positions(session) -> int:
     rows = (await session.exec(select(Position).where(Position.status.in_(["OPEN", "PARTIALLY_CLOSED"])))).all()
     return len(rows)
 
@@ -127,9 +133,9 @@ async def _process_signal(session, signal: TradingSignal) -> None:
     if market is None:
         return  # no market data yet for this token — leave PENDING until ingestion catches up
 
-    portfolio = await _latest_portfolio(session)
+    portfolio = await get_latest_portfolio(session)
     circuit_breaker_active = await _circuit_breaker_active(session)
-    open_positions = await _open_positions_count(session)
+    open_positions = await count_open_positions(session)
 
     outcome = evaluate_risk(
         action=signal.action,
@@ -247,7 +253,7 @@ async def _monitor_positions(session) -> None:
     positions = (await session.exec(select(Position).where(Position.status.in_(["OPEN", "PARTIALLY_CLOSED"])))).all()
     if not positions:
         return
-    portfolio = await _latest_portfolio(session)
+    portfolio = await get_latest_portfolio(session)
     total_positions_value = Decimal(0)
     cash_inflow = Decimal(0)
     realized_delta = Decimal(0)
@@ -314,12 +320,13 @@ async def run_risk_engine_loop() -> None:
     while True:
         async with async_session_factory() as session:
             await _expire_stale_signals(session)
-            pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
-            for signal in pending:
-                try:
-                    await _process_signal(session, signal)
-                except Exception:
-                    logger.exception("risk engine failed processing signal %s", signal.id)
+            if not await is_paused(session):
+                pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
+                for signal in pending:
+                    try:
+                        await _process_signal(session, signal)
+                    except Exception:
+                        logger.exception("risk engine failed processing signal %s", signal.id)
             try:
                 await _monitor_positions(session)
             except Exception:

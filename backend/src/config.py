@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     max_drawdown_limit_pct: Decimal = Decimal("0.08")
     max_spread_pct: Decimal = Decimal("0.0008")
 
+    telegram_bot_token: str = ""
+    telegram_allowed_user_id: str = ""
+    telegram_allowed_chat_id: str = ""
+
     @property
     def solana_rpc_url(self) -> str:
         # Q-04: Helius Free Tier primer, Public RPC sebagai cadangan jika key belum diisi.
