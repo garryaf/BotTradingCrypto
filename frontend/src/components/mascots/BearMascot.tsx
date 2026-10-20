@@ -1,56 +1,91 @@
+/** Roaring bear, bold-outline mascot style (ref: classic red bull-vs-bear market icon). */
 export function BearMascot({ className }: { className?: string }) {
+  const outline = { stroke: "black", strokeWidth: 4, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
   return (
     <svg viewBox="0 0 220 240" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* legs planted, standing tall */}
-      <ellipse cx="78" cy="214" rx="20" ry="14" fill="currentColor" opacity={0.85} />
-      <ellipse cx="142" cy="214" rx="20" ry="14" fill="currentColor" opacity={0.85} />
+      {/* planted legs */}
+      <path d="M62 198 C58 212 62 222 78 224 C92 226 98 216 94 202 Z" fill="currentColor" {...outline} />
+      <path d="M126 202 C124 216 130 226 144 226 C158 226 162 214 156 200 Z" fill="currentColor" {...outline} />
 
-      {/* body, standing on hind legs */}
+      {/* body */}
       <path
-        d="M58 150 C50 110 72 78 110 78 C148 78 170 110 162 150 C158 176 146 196 110 198 C74 196 62 176 58 150 Z"
+        d="M54 150 C44 112 68 76 110 76 C152 76 176 112 166 150 C162 176 148 198 110 200 C72 198 58 176 54 150 Z"
         fill="currentColor"
+        {...outline}
+      />
+      <path
+        d="M72 100 C84 88 100 82 116 84 C100 90 88 100 82 114 C78 124 78 134 82 142 C68 132 62 114 72 100 Z"
+        fill="white"
+        opacity={0.2}
       />
 
-      {/* raised arm — left, claws out */}
+      {/* left arm, swiping, jagged fur edge */}
       <path
-        d="M62 132 C38 118 24 90 30 60 C40 82 54 100 72 114 Z"
+        d="M58 136 C34 124 18 98 22 68 C30 84 40 98 54 110 C50 96 52 82 60 70 C64 88 66 104 74 118 L70 128 Z"
         fill="currentColor"
+        {...outline}
       />
-      <path d="M28 58 L20 44 M31 56 L26 40 M36 58 L34 42" stroke="currentColor" strokeWidth={5} strokeLinecap="round" />
-
-      {/* raised arm — right, claws out */}
       <path
-        d="M158 132 C182 118 196 90 190 60 C180 82 166 100 148 114 Z"
-        fill="currentColor"
+        d="M22 70 L12 58 L24 62 L18 48 L30 56 L26 42"
+        stroke="currentColor"
+        strokeWidth={5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        {...outline}
       />
-      <path d="M192 58 L200 44 M189 56 L194 40 M184 58 L186 42" stroke="currentColor" strokeWidth={5} strokeLinecap="round" />
+      <path d="M26 66 L14 54 M32 70 L22 56 M38 76 L30 60" stroke="black" strokeWidth={4} strokeLinecap="round" />
 
-      {/* ears */}
-      <circle cx="78" cy="58" r="16" fill="currentColor" />
-      <circle cx="142" cy="58" r="16" fill="currentColor" />
-      <circle cx="78" cy="58" r="7" fill="currentColor" opacity={0.5} />
-      <circle cx="142" cy="58" r="7" fill="currentColor" opacity={0.5} />
+      {/* right arm, swiping, jagged fur edge */}
+      <path
+        d="M162 136 C186 124 202 98 198 68 C190 84 180 98 166 110 C170 96 168 82 160 70 C156 88 154 104 146 118 L150 128 Z"
+        fill="currentColor"
+        {...outline}
+      />
+      <path
+        d="M198 70 L208 58 L196 62 L202 48 L190 56 L194 42"
+        stroke="currentColor"
+        strokeWidth={5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        {...outline}
+      />
+      <path d="M194 66 L206 54 M188 70 L198 56 M182 76 L190 60" stroke="black" strokeWidth={4} strokeLinecap="round" />
+
+      {/* ears, furred */}
+      <path d="M68 62 C60 50 62 36 74 32 C78 44 78 54 76 64 Z" fill="currentColor" {...outline} />
+      <path d="M152 62 C160 50 158 36 146 32 C142 44 142 54 144 64 Z" fill="currentColor" {...outline} />
 
       {/* head */}
-      <ellipse cx="110" cy="92" rx="46" ry="42" fill="currentColor" />
+      <path
+        d="M62 94 C56 64 80 44 110 44 C140 44 164 64 158 94 C154 116 134 130 110 130 C86 130 66 116 62 94 Z"
+        fill="currentColor"
+        {...outline}
+      />
 
       {/* angry brow */}
-      <path d="M78 76 L96 82 M142 76 L124 82" stroke="black" strokeWidth={4} strokeLinecap="round" opacity={0.55} />
-
-      {/* glowing angry eyes */}
-      <ellipse cx="90" cy="88" rx="5" ry="4" fill="white" />
-      <ellipse cx="130" cy="88" rx="5" ry="4" fill="white" />
-      <ellipse cx="91" cy="89" rx="2.4" ry="3" fill="black" />
-      <ellipse cx="129" cy="89" rx="2.4" ry="3" fill="black" />
+      <path d="M78 80 L98 86 M142 80 L122 86" stroke="black" strokeWidth={4} strokeLinecap="round" />
+      {/* eyes */}
+      <ellipse cx="92" cy="92" rx="5" ry="4" fill="white" />
+      <ellipse cx="128" cy="92" rx="5" ry="4" fill="white" />
+      <ellipse cx="93" cy="93" rx="2.4" ry="3" fill="black" />
+      <ellipse cx="127" cy="93" rx="2.4" ry="3" fill="black" />
 
       {/* snout */}
-      <ellipse cx="110" cy="112" rx="24" ry="18" fill="currentColor" opacity={0.8} />
+      <path
+        d="M86 108 C94 100 126 100 134 108 C138 118 130 128 110 128 C90 128 82 118 86 108 Z"
+        fill="currentColor"
+        opacity={0.85}
+        {...outline}
+      />
 
-      {/* roaring mouth */}
-      <path d="M90 118 C96 134 124 134 130 118 C120 128 100 128 90 118 Z" fill="black" opacity={0.75} />
-      <path d="M96 118 L100 126 L104 118 Z" fill="white" opacity={0.9} />
-      <path d="M116 118 L120 126 L124 118 Z" fill="white" opacity={0.9} />
-      <ellipse cx="110" cy="108" rx="5" ry="3.5" fill="black" opacity={0.6} />
+      {/* roaring open mouth, teeth + tongue */}
+      <path d="M92 114 C98 132 122 132 128 114 C120 124 100 124 92 114 Z" fill="black" />
+      <path d="M100 120 C108 128 112 128 120 120 C116 132 104 132 100 120 Z" fill="#c0392b" />
+      <path d="M97 115 L101 122 L105 115 Z" fill="white" />
+      <path d="M115 115 L119 122 L123 115 Z" fill="white" />
+      <ellipse cx="110" cy="104" rx="5" ry="3.6" fill="black" opacity={0.6} />
     </svg>
   );
 }

@@ -1,55 +1,60 @@
+/** Charging bull, bold-outline mascot style (ref: classic blue bull-vs-bear market icon). */
 export function BullMascot({ className }: { className?: string }) {
+  const outline = { stroke: "black", strokeWidth: 4, strokeLinejoin: "round" as const, strokeLinecap: "round" as const };
   return (
-    <svg viewBox="0 0 280 180" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* back legs */}
-      <path d="M92 132 L78 168 L92 170 L106 136 Z" fill="currentColor" opacity={0.8} />
-      <path d="M118 134 L110 170 L124 172 L136 138 Z" fill="currentColor" opacity={0.8} />
-      {/* hooves */}
-      <ellipse cx="83" cy="169" rx="8" ry="4" fill="black" opacity={0.45} />
-      <ellipse cx="116" cy="171" rx="8" ry="4" fill="black" opacity={0.45} />
+    <svg viewBox="0 0 220 220" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* front legs, planted wide and ready to charge */}
+      <path d="M66 176 C60 190 62 202 76 206 C88 210 96 200 92 186 Z" fill="currentColor" {...outline} />
+      <path d="M154 176 C160 190 158 202 144 206 C132 210 124 200 128 186 Z" fill="currentColor" {...outline} />
 
-      {/* front legs, reaching forward in a gallop */}
-      <path d="M160 136 L178 170 L164 174 L148 140 Z" fill="currentColor" />
-      <path d="M180 132 L204 160 L192 168 L172 136 Z" fill="currentColor" />
-      <ellipse cx="170" cy="173" rx="8" ry="4" fill="black" opacity={0.45} />
-      <ellipse cx="196" cy="166" rx="8" ry="4" fill="black" opacity={0.45} />
-
-      {/* tail */}
-      <path d="M82 98 C62 94 50 80 56 62" stroke="currentColor" strokeWidth={7} strokeLinecap="round" fill="none" opacity={0.75} />
-      <ellipse cx="55" cy="58" rx="7" ry="9" fill="currentColor" opacity={0.75} />
-
-      {/* muscular barrel body */}
+      {/* broad muscular shoulders tapering to chest */}
       <path
-        d="M58 112 C52 82 78 58 122 56 C150 55 170 64 180 82 C186 93 183 104 172 108 C170 118 164 126 150 128 L84 130 C66 130 60 122 58 112 Z"
+        d="M50 150 C44 110 70 78 110 78 C150 78 176 110 170 150 C166 172 148 186 110 188 C72 186 54 172 50 150 Z"
         fill="currentColor"
+        {...outline}
+      />
+      <path
+        d="M68 104 C80 90 96 82 112 82 C96 90 84 102 78 118 C74 128 74 138 78 146 C64 136 58 118 68 104 Z"
+        fill="white"
+        opacity={0.22}
       />
 
-      {/* neck + lowered head */}
+      {/* ears */}
+      <path d="M62 86 L46 70 L68 78 Z" fill="currentColor" {...outline} />
+      <path d="M158 86 L174 70 L152 78 Z" fill="currentColor" {...outline} />
+
+      {/* symmetric dramatic "C" horns, tips hooking in toward the brow */}
       <path
-        d="M168 78 C182 68 202 68 214 80 C224 90 224 106 212 116 L196 122 C182 118 172 100 168 78 Z"
+        d="M72 78 C54 68 44 48 52 26 C64 36 68 54 66 70 C76 58 90 52 104 54 C88 62 76 70 72 86 Z"
         fill="currentColor"
+        {...outline}
       />
+      <path
+        d="M148 78 C166 68 176 48 168 26 C156 36 152 54 154 70 C144 58 130 52 116 54 C132 62 144 70 148 86 Z"
+        fill="currentColor"
+        {...outline}
+      />
+
+      {/* head, lowered toward the viewer */}
+      <ellipse cx="110" cy="118" rx="42" ry="38" fill="currentColor" {...outline} />
+
+      {/* angry brow */}
+      <path d="M82 100 L102 106 M138 100 L118 106" stroke="black" strokeWidth={5} strokeLinecap="round" />
+      {/* eyes */}
+      <path d="M90 112 L104 114 L94 120 Z" fill="white" />
+      <path d="M130 112 L116 114 L126 120 Z" fill="white" />
+      <circle cx="97" cy="114.5" r="2.4" fill="black" />
+      <circle cx="123" cy="114.5" r="2.4" fill="black" />
 
       {/* snout */}
-      <path d="M205 104 C216 100 230 103 234 114 C237 123 230 130 218 129 C208 128 202 116 205 104 Z" fill="currentColor" opacity={0.78} />
-      <ellipse cx="216" cy="115" rx="2.3" ry="3" fill="black" opacity={0.55} />
-      <ellipse cx="226" cy="117" rx="2.3" ry="3" fill="black" opacity={0.55} />
-
-      {/* ear */}
-      <path d="M186 76 L176 64 L194 70 Z" fill="currentColor" opacity={0.85} />
-
-      {/* symmetric curved horns */}
-      <path d="M190 74 C178 58 176 38 188 22" stroke="currentColor" strokeWidth={10} strokeLinecap="round" fill="none" />
-      <path d="M204 70 C212 52 228 40 246 40" stroke="currentColor" strokeWidth={10} strokeLinecap="round" fill="none" />
-
-      {/* angry brow + glowing eye */}
-      <path d="M188 86 L204 90" stroke="black" strokeWidth={3.5} strokeLinecap="round" opacity={0.5} />
-      <ellipse cx="196" cy="94" rx="4.5" ry="3.2" fill="white" />
-      <ellipse cx="197" cy="94" rx="2.3" ry="2.7" fill="black" />
+      <ellipse cx="110" cy="142" rx="26" ry="18" fill="currentColor" opacity={0.85} {...outline} />
+      <ellipse cx="100" cy="144" rx="3" ry="4" fill="black" opacity={0.6} />
+      <ellipse cx="120" cy="144" rx="3" ry="4" fill="black" opacity={0.6} />
+      <path d="M98 150 C104 154 116 154 122 150" stroke="black" strokeWidth={2.5} fill="none" opacity={0.5} />
 
       {/* nostril steam */}
-      <path d="M236 110 C242 106 248 106 252 100" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" opacity={0.35} />
-      <path d="M238 120 C244 118 250 119 254 114" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" opacity={0.35} />
+      <path d="M76 146 C70 140 70 132 76 124" stroke="currentColor" strokeWidth={3} strokeLinecap="round" opacity={0.35} />
+      <path d="M144 146 C150 140 150 132 144 124" stroke="currentColor" strokeWidth={3} strokeLinecap="round" opacity={0.35} />
     </svg>
   );
 }
