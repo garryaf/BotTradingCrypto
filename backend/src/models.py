@@ -268,6 +268,36 @@ class UserSetting(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
 
 
+class IngestionError(SQLModel, table=True):
+    """Dead Letter Queue — docs/03-diagrams/DATA_FLOW.mmd ("ingestion_errors table")."""
+
+    __tablename__ = "ingestion_errors"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    source: str = Field(max_length=32)  # BINANCE / SOLANA_RPC
+    reason: str = Field(max_length=32)  # PARSE_ERROR, DUPLICATE_SIGNATURE, STALE_DATA
+    reference: str | None = Field(default=None, max_length=128)
+    detail: dict = Field(default_factory=dict, sa_column=Column(JSONB))
+    occurred_at: datetime = Field(default_factory=_utcnow)
+
+
+class MarketOHLCV(SQLModel, table=True):
+    """M1/M5/H1 aggregation of market_snapshots — ROADMAP.md TASK-2.6."""
+
+    __tablename__ = "market_ohlcv"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    token_id: UUID = Field(foreign_key="tokens.id", index=True)
+    interval: str = Field(max_length=8)  # M1, M5, H1
+    bucket_time: datetime
+    open: Decimal = Field(max_digits=18, decimal_places=6)
+    high: Decimal = Field(max_digits=18, decimal_places=6)
+    low: Decimal = Field(max_digits=18, decimal_places=6)
+    close: Decimal = Field(max_digits=18, decimal_places=6)
+    sample_count: int = Field(default=0)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
 class SystemEvent(SQLModel, table=True):
     __tablename__ = "system_events"
 
