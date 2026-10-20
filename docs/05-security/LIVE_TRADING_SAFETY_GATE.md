@@ -55,7 +55,7 @@ Fitur Live Trading **TIDAK BOLEH** diaktifkan atau dikembangkan sebelum seluruh 
 
 ### Kriteria 1: Periode Observasi Paper Trading Minimum 30 Hari
 - Sistem paper trading wajib telah berjalan secara kontinu minimal **30 hari kalender berturut-turut** di lingkungan pengujian.
-- Menghasilkan **Positive Expectancy ($E > 0$)** dan Net PnL positif setelah memperhitungkan biaya bursa Bybit Spot (0.1%) dan estimasi slippage realistis.
+- Menghasilkan **Positive Expectancy ($E > 0$)** dan Net PnL positif setelah memperhitungkan biaya bursa Binance Spot (0.1%) dan estimasi slippage realistis.
 
 ### Kriteria 2: Kepatuhan Drawdown & Stabilitas Tanpa Crash
 - Selama 30 hari observasi, Maximum Drawdown portofolio simulasi **tidak pernah menyentuh atau melampaui batas 8.0%**.

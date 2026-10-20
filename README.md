@@ -1,7 +1,7 @@
 # AUTO-TRADE-AA
 
 > **AI-Powered Crypto Trading & Copy-Trading Platform**  
-> *Hybrid Strategy (Bybit Spot + Solana DEX) | Paper-Trading First | Deterministic Risk Gate (9 Pintu) | Fail-Closed Safety*
+> *Hybrid Strategy (Binance Spot + Solana DEX) | Paper-Trading First | Deterministic Risk Gate (9 Pintu) | Fail-Closed Safety*
 
 ---
 
@@ -10,7 +10,7 @@
 **AUTO-TRADE-AA** adalah platform perdagangan kripto cerdas berbasis agen AI (*Hermes Multi-Agent Orchestrator*) yang memadukan model inferensi probabilistik dengan mesin risiko deterministik (*Deterministic Risk Engine*). Sistem dirancang dengan prinsip **Safety-by-Design**, di mana AI hanya bertugas menganalisis dan merekomendasikan sinyal, sedangkan kode deterministik memegang kendali penuh atas validasi keselamatan dan eksekusi pesanan virtual (*Paper Trading*).
 
 ### Pilar Utama Sistem:
-1. **Hybrid Market Engine:** Integrasi likuiditas institusional (Bybit Spot API) dan peluang token terdesentralisasi on-chain (Solana Raydium/Orca DEX).
+1. **Hybrid Market Engine:** Integrasi likuiditas institusional (Binance Spot API) dan peluang token terdesentralisasi on-chain (Solana Raydium/Orca DEX).
 2. **Deterministic Risk Gate (9 Pintu):** Validasi serial ketat sebelum eksekusi (Risk 0.5% per trade, Daily Loss limit 2%, Drawdown limit 8%, Positive Expectancy, Freshness Check $\le$ 30 detik).
 3. **Paper Trading First:** Simulasi akuntansi presisi dengan pemodelan slippage realistis, partial fill simulation, dan pemotongan biaya transaksi.
 4. **Hardcoded Live Lock:** Eksekusi dana riil terkunci secara struktural dan runtime pada Fase 0 hingga Fase 6.
@@ -23,8 +23,8 @@
 | Fase | Deskripsi | Status |
 |---|---|---|
 | **Fase 0** | **Dokumentasi Arsitektur, ERD, Flowchart, dan Spesifikasi Keamanan** | ✅ **SELESAI** |
-| **Fase 1** | Infrastruktur Lokal Docker Compose, Database PostgreSQL Baseline, & API Scaffolding | ⏳ *Siap Dieksekusi* |
-| **Fase 2** | Ingestion Engine (Bybit Spot REST/WS, Solana RPC Polling, Deduplikasi, & DLQ) | 📅 *Terjadwal* |
+| **Fase 1** | Infrastruktur Lokal Docker Compose, Database PostgreSQL Baseline, & API Scaffolding | ✅ **SELESAI** |
+| **Fase 2** | Ingestion Engine (Binance Spot REST/WS, Solana RPC Polling, Deduplikasi, & DLQ) | 📅 *Terjadwal* |
 | **Fase 3** | AI Model Gateway (OpenRouter + 9Route Fallback) & Hermes Multi-Agent Orchestrator | 📅 *Terjadwal* |
 | **Fase 4** | Deterministic Risk Gate (9 Pintu) & Paper Broker Matching Engine Simulator | 📅 *Terjadwal* |
 | **Fase 5** | Frontend Web Dashboard (Next.js 15) & Telegram Control Bot (/kill switch) | 📅 *Terjadwal* |
@@ -68,17 +68,30 @@ Direktori [`docs/`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs) 
 ## 🚀 Panduan Memulai Cepat (Quickstart)
 
 ### Prasyarat Sistem:
-- MacBook Pro / Mesin Host dengan Docker Desktop aktif (minimum RAM 8 GB dialokasikan ke Docker).
-- Python 3.11 atau 3.12 (untuk lingkungan backend).
+- Mesin Host dengan Docker Desktop aktif (minimum RAM 8 GB dialokasikan ke Docker).
 - Node.js v20+ LTS (untuk dashboard frontend).
 
-### Langkah Persiapan:
+### Backend (Fase 1 — PostgreSQL + FastAPI):
 ```bash
 # 1. Salin template variabel lingkungan
 cp .env.example .env
-
-# 2. Sesuaikan konfigurasi rahasia pada file .env (API Keys, Token DB, dsb.)
+# Sesuaikan konfigurasi rahasia pada file .env (API Keys, Token DB, dsb.)
 # CATATAN: Pastikan LIVE_TRADING_ENABLED tetap 'false'
+
+# 2. Jalankan PostgreSQL & API backend (migrasi Alembic berjalan otomatis saat startup)
+docker compose up -d postgres backend
+
+# 3. Verifikasi
+curl http://localhost:8000/api/v1/health
+# -> {"status": "ok", "db": "connected"}
+```
+
+### Frontend (Dashboard Next.js):
+```bash
+cd frontend
+npm install
+npm run dev
+# -> http://localhost:3000
 ```
 
 ---

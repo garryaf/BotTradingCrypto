@@ -1,7 +1,7 @@
 erDiagram
     %% ENTITY RELATIONSHIP DIAGRAM (ERD) - AUTO-TRADE-AA PLATFORM
     %% Database Engine: PostgreSQL 16
-    %% Arsitektur: Hybrid Bybit Spot & Solana On-Chain Paper Trading
+    %% Arsitektur: Hybrid Binance Spot & Solana On-Chain Paper Trading
 
     WALLETS ||--o{ WALLET_OBSERVATIONS : "memiliki riwayat"
     TOKENS ||--o{ WALLET_OBSERVATIONS : "diperdagangkan dalam"
@@ -25,8 +25,8 @@ erDiagram
 
     WALLETS {
         uuid id PK
-        varchar address UK "Alamat publik on-chain / Bybit Account Tag"
-        varchar chain "solana / bybit_spot"
+        varchar address UK "Alamat publik on-chain / Binance Account Tag"
+        varchar chain "solana / Binance_spot"
         varchar label "Nama alias dompet / trader"
         varchar status "DISCOVERED / PENDING_REVIEW / ACTIVE_MONITORED / ARCHIVED"
         numeric composite_score "Skor kinerja (0.00 - 100.00)"
@@ -43,9 +43,9 @@ erDiagram
     WALLET_OBSERVATIONS {
         uuid id PK
         uuid wallet_id FK
-        varchar tx_signature UK "Hash unik transaksi Base58 / Bybit Order ID"
-        varchar chain "solana / bybit_spot"
-        varchar dex_protocol "RAYDIUM / ORCA / JUPITER / BYBIT"
+        varchar tx_signature UK "Hash unik transaksi Base58 / Binance Order ID"
+        varchar chain "solana / Binance_spot"
+        varchar dex_protocol "RAYDIUM / ORCA / JUPITER / Binance"
         varchar action "BUY / SELL / TRANSFER_IN / TRANSFER_OUT / LP_ADD / LP_REMOVE"
         uuid token_in_id FK "Token yang diserahkan"
         uuid token_out_id FK "Token yang diterima"
@@ -61,8 +61,8 @@ erDiagram
 
     TOKENS {
         uuid id PK
-        varchar address UK "Mint address Solana / Simbol Bybit Spot"
-        varchar chain "solana / bybit_spot"
+        varchar address UK "Mint address Solana / Simbol Binance Spot"
+        varchar chain "solana / Binance_spot"
         varchar symbol "SOL / BTC / ETH / BONK dll"
         varchar name "Nama aset / token"
         int decimals "Jumlah desimal token (misal 9 untuk SOL, 8 BTC)"
@@ -86,7 +86,7 @@ erDiagram
         numeric bid_price "Best bid price"
         numeric ask_price "Best ask price"
         numeric spread_pct "Persentase selisih bid-ask"
-        varchar source "BYBIT_WS / HELIUS_RPC / RAYDIUM_POOL / DEXSCREENER"
+        varchar source "Binance_WS / HELIUS_RPC / RAYDIUM_POOL / DEXSCREENER"
         timestamp snapshot_time "Waktu data diambil"
         boolean is_stale "Flag kadaluarsa (> 30 detik)"
     }
@@ -191,9 +191,9 @@ erDiagram
         numeric executed_quantity "Kuantitas token yang terisi (fill)"
         numeric executed_price "Harga fill aktual setelah slippage"
         numeric slippage_pct "Slippage yang disimulasikan"
-        numeric transaction_fee_usd "Biaya transaksi Bybit/DEX simulasi"
+        numeric transaction_fee_usd "Biaya transaksi Binance/DEX simulasi"
         numeric gas_fee_native "Biaya jaringan on-chain simulasi"
-        varchar execution_venue "BYBIT_SPOT_SIM / SOLANA_RAYDIUM_SIM"
+        varchar execution_venue "Binance_SPOT_SIM / SOLANA_RAYDIUM_SIM"
         timestamp executed_at
     }
 

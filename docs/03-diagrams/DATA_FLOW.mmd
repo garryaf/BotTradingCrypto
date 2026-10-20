@@ -2,7 +2,7 @@ graph LR
     %% DATA FLOW DIAGRAM - AUTO-TRADE-AA (END-TO-END PIPELINE)
 
     subgraph SOURCES["1. Data Sources"]
-        BYBIT["Bybit API<br/>(WS Ticker, Book & OHLCV)"]
+        Binance["Binance API<br/>(WS Ticker, Book & OHLCV)"]
         SOLANA["Solana RPC / Helius<br/>(Signatures & Raw Tx)"]
         DEX_POOLS["DEX Screener / Birdeye<br/>(Pool Liquidity & Vol 24h)"]
     end
@@ -40,7 +40,7 @@ graph LR
     end
 
     subgraph EXECUTION["7. Paper Execution & Compounding"]
-        BROKER["Paper Broker Simulator<br/>• Slippage & Fee Bybit/DEX<br/>• Partial Fill Simulation"]
+        BROKER["Paper Broker Simulator<br/>• Slippage & Fee Binance/DEX<br/>• Partial Fill Simulation"]
         COMPOUND["Compounding & Position Engine<br/>• 50% TP1 & Trailing Stop<br/>• Auto-adjust Risk Sizing"]
     end
 
@@ -55,7 +55,7 @@ graph LR
     end
 
     %% Data Pipeline Connectors
-    BYBIT --> PARSER
+    Binance --> PARSER
     SOLANA --> PARSER
     DEX_POOLS --> PARSER
 

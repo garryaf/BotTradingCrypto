@@ -33,8 +33,8 @@ Model data dibagi menjadi 5 kelompok domain logis:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 1. DOMAIN OBSERVASI PASAR & BLOCKCHAIN                                      │
 │    • WALLETS (Daftar alamat wallet pantauan / trader target)                │
-│    • TOKENS (Master data token Solana SPL & instrumen Bybit Spot)           │
-│    • WALLET_OBSERVATIONS (Log transaksi on-chain Solana / Bybit)            │
+│    • TOKENS (Master data token Solana SPL & instrumen Binance Spot)           │
+│    • WALLET_OBSERVATIONS (Log transaksi on-chain Solana / Binance)            │
 │    • MARKET_SNAPSHOTS (Data harga spot, spread, depth, volume per menit)    │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ Memicu Analisis
@@ -57,7 +57,7 @@ Model data dibagi menjadi 5 kelompok domain logis:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 4. DOMAIN SIMULASI EKSEKUSI & PORTOFOLIO                                    │
 │    • PAPER_ORDERS (Order virtual: Market / Limit Order)                     │
-│    • PAPER_TRADES (Eksekusi fill virtual, slippage, & fee Bybit/DEX)        │
+│    • PAPER_TRADES (Eksekusi fill virtual, slippage, & fee Binance/DEX)        │
 │    • POSITIONS (Posisi terbuka, SL, Partial TP1 50%, TP2, Trailing Stop)   │
 │    • PORTFOLIO_SNAPSHOTS (Equity Ledger, Daily Loss %, High-Water Mark)     │
 └──────────────────────────────────────┬──────────────────────────────────────┘

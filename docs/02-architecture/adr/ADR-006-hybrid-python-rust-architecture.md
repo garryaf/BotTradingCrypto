@@ -11,7 +11,7 @@ Platform **AUTO-TRADE-AA** memiliki dua karakteristik beban kerja yang kontras:
 1. **Beban Kerja AI & Antarmuka Kontrol:**
    - Orkestrasi multi-agent (Hermes Agent), manipulasi string dan prompt, integrasi AI Model Gateway (OpenRouter, 9Route), validasi skema JSON Pydantic, serta endpoint REST API kontrol dan bot Telegram. Beban kerja ini sangat cocok dan produktif dikembangkan menggunakan ekosistem **Python (FastAPI)**.
 2. **Beban Kerja Trading On-Chain & Eksekusi Berkecepatan Tinggi:**
-   - Ingestion WebSocket berfrekuensi tinggi (Bybit Spot L2 Orderbook, Solana RPC/Geyser stream), parsing instruksi biner DEX Solana (Raydium, Orca), evaluasi aturan matematika deterministik Risk Gate (< 1 milidetik), kalkulasi slippage AMM, serta simulasi pencocokan order (*matching engine*). Beban kerja ini menuntut keandalan memori mutlak (*memory safety*), ketiadaan jeda Garbage Collection (*zero-cost abstractions, zero GC pauses*), dan eksekusi konkruen berperforma tinggi yang merupakan keunggulan utama bahasa **Rust**.
+   - Ingestion WebSocket berfrekuensi tinggi (Binance Spot L2 Orderbook, Solana RPC/Geyser stream), parsing instruksi biner DEX Solana (Raydium, Orca), evaluasi aturan matematika deterministik Risk Gate (< 1 milidetik), kalkulasi slippage AMM, serta simulasi pencocokan order (*matching engine*). Beban kerja ini menuntut keandalan memori mutlak (*memory safety*), ketiadaan jeda Garbage Collection (*zero-cost abstractions, zero GC pauses*), dan eksekusi konkruen berperforma tinggi yang merupakan keunggulan utama bahasa **Rust**.
 
 Kandidat pendekatan:
 - **Full Python:** Mudah dibangun, tetapi menghadapi keterbatasan GIL (*Global Interpreter Lock*), overhead parsing biner Solana, dan konsumsi memori lebih tinggi pada ingestion kontinu.
@@ -28,7 +28,7 @@ Kami memutuskan untuk mengadopsi **Arsitektur Hibrida**:
    - Menjalankan AI Model Gateway (OpenRouter & 9Route Adapter).
    - Menyediakan REST API untuk Web Dashboard dan mengelola bot Telegram.
 3. **Core Engine Performa Tinggi (Rust):**
-   - **Ingestion & Parser Service:** Konektor WebSocket Bybit Spot dan parser instruksi transaksi on-chain Solana menggunakan `solana-sdk` native.
+   - **Ingestion & Parser Service:** Konektor WebSocket Binance Spot dan parser instruksi transaksi on-chain Solana menggunakan `solana-sdk` native.
    - **Deterministic Risk Engine:** Evaluasi 9 pintu risiko (Risk 0.5%, Daily Loss 2%, Drawdown 8%, Expectancy Positif) dalam sub-milidetik.
    - **Paper Broker Matching Engine:** Simulasi pencocokan order, model slippage matematis, dan akuntansi portofolio berkecepatan memori (*in-memory ledger*).
 4. **Mekanisme Interoperabilitas:** Komunikasi antara Python dan Rust dapat dilakukan melalui **FFI (PyO3)** untuk integrasi in-process monolitik berkinerja tinggi, atau melalui **gRPC / IPC lokal** berlatensi ultra-rendah.

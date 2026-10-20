@@ -59,7 +59,7 @@ Setiap perubahan kode (*pull request*) wajib memenuhi piramida pengujian berikut
   - **Persamaan Akuntansi:** Setelah 100 transaksi virtual acak:
     $$\text{Cash Balance} + \sum (\text{Unrealized Value}) = \text{Total Equity}$$
     Deviasi pembukuan wajib $0.00$.
-  - **Slippage & Fee Realism:** Memastikan harga fill paper order memperhitungkan taker fee (0.10% Bybit / priority fee Solana) dan slippage minimal 0.05%.
+  - **Slippage & Fee Realism:** Memastikan harga fill paper order memperhitungkan taker fee (0.10% Binance / priority fee Solana) dan slippage minimal 0.05%.
   - **Pencegahan Look-Ahead Bias:** Memverifikasi bahwa mesin backtesting hanya membaca data dengan timestamp $\le t_{\text{simulasi}}$.
 
 ### 2.5 Drill Pengujian Darurat (Kill Switch Drill)
@@ -94,7 +94,7 @@ Mengacu pada spesifikasi [LIVE_TRADING_SAFETY_GATE.md](file:///Users/nabilartana
    DATABASE_URL="postgresql+asyncpg://test_user:test_pass@localhost:5432/test_auto_trade" pytest tests/
    ```
 2. **Mocking External Services:**
-   Semua panggilan ke Solana RPC (Helius) dan Bybit API di-mock pada unit/integration test menggunakan `pytest-mock` atau `respx` untuk mencegah konsumsi kuota rate limit eksternal.
+   Semua panggilan ke Solana RPC (Helius) dan Binance API di-mock pada unit/integration test menggunakan `pytest-mock` atau `respx` untuk mencegah konsumsi kuota rate limit eksternal.
 3. **Execution Command:**
    ```bash
    # Menjalankan seluruh test suite dengan laporan coverage

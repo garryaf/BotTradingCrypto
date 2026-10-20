@@ -13,7 +13,7 @@ Roadmap ini merinci transisi dari **Tahap 0 (Spesifikasi & Desain Arsitektur)** 
 ```mermaid
 flowchart TD
     F0["Fase 0: Desain & Arsitektur\n(SELESAI)"] --> F1["Fase 1: Infra Lokal & DB Baseline\n(Docker, Alembic, FastAPI Scaffolding)"]
-    F1 --> F2["Fase 2: Market Data Engine\n(Bybit REST/WS + Solana Ingestion & DLQ)"]
+    F1 --> F2["Fase 2: Market Data Engine\n(Binance REST/WS + Solana Ingestion & DLQ)"]
     F2 --> F3["Fase 3: AI Gateway & Hermes Agent\n(OpenRouter/9Route, Prompt & Skills)"]
     F3 --> F4["Fase 4: Risk Gate & Paper Broker\n(9 Pintu Deterministik & Partial Fill)"]
     F4 --> F5["Fase 5: UI Dashboard & Telegram Bot\n(Next.js 15 & Emergency Kill Switch)"]
@@ -47,16 +47,16 @@ flowchart TD
 ---
 
 ### Fase 2 — Market Data Engine & Ingestion Pipeline (Target: 1-2 Minggu)
-**Tujuan:** Mengumpulkan data pasar secara stabil dari Bybit Spot dan on-chain Solana dengan penanganan kegagalan eksplisit.
+**Tujuan:** Mengumpulkan data pasar secara stabil dari Binance Spot dan on-chain Solana dengan penanganan kegagalan eksplisit.
 
-- [ ] **TASK-2.1:** Implementasi Bybit Spot Client (REST untuk klines/orderbook + WebSocket untuk ticker & live trades).
+- [ ] **TASK-2.1:** Implementasi Binance Spot Client (REST untuk klines/orderbook + WebSocket untuk ticker & live trades).
 - [ ] **TASK-2.2:** Implementasi Solana RPC Ingestion Client (Polling periodik 15s via Helius / Public RPC).
 - [ ] **TASK-2.3:** Implementasi normalisasi format transaksi dan deduplikasi signature (`wallet_observations`).
 - [ ] **TASK-2.4:** Implementasi penanganan error ingestion: Parser Error Handler, Dead Letter Queue (DLQ), dan Stale Feed Detector.
 - [ ] **TASK-2.5:** Implementasi `FRESHNESS_CHECK` gate (data berumur > 30 detik langsung di-drop ke DLQ).
 - [ ] **TASK-2.6:** Background worker data aggregation untuk M1, M5, H1 timeframes.
 
-**Kriteria Selesai (Milestone 2):** Data pasar Bybit dan on-chain Solana tersimpan di database secara teratur, duplikasi signature ditolak 100%, data stale tidak masuk pipeline agregasi.
+**Kriteria Selesai (Milestone 2):** Data pasar Binance dan on-chain Solana tersimpan di database secara teratur, duplikasi signature ditolak 100%, data stale tidak masuk pipeline agregasi.
 
 ---
 
@@ -91,7 +91,7 @@ flowchart TD
 - [ ] **TASK-4.2:** Implementasi Paper Broker Matching Engine:
   - Model eksekusi konservatif (harga fill = mid + dynamic slippage, floor 0.05%)
   - Simulasi partial fill proporsional terhadap volume order book
-  - Pemotongan taker fee (Bybit 0.10%, Solana gas/priority fee)
+  - Pemotongan taker fee (Binance 0.10%, Solana gas/priority fee)
 - [ ] **TASK-4.3:** Portofolio & Compounding Engine (kalkulasi High-Water Mark, penyesuaian lot adaptif).
 - [ ] **TASK-4.4:** Feedback Loop: State posisi terbuka dan daily loss ter-update real-time ke Risk Gate.
 
@@ -118,7 +118,7 @@ flowchart TD
 ### Fase 6 — Backtesting Engine & Paper Trading Soak Test (Target: 4 Minggu)
 **Tujuan:** Menguji kehandalan strategi secara historis dan menjalankan simulasi tanpa interupsi di lingkungan nyata.
 
-- [ ] **TASK-6.1:** Engine Backtesting historis bebas look-ahead bias dengan data Bybit & Solana 60 hari terakhir.
+- [ ] **TASK-6.1:** Engine Backtesting historis bebas look-ahead bias dengan data Binance & Solana 60 hari terakhir.
 - [ ] **TASK-6.2:** Walk-forward validation (in-sample 70%, out-of-sample 30%).
 - [ ] **TASK-6.3:** Pelaksanaan Paper Trading Soak Test selama 30 hari kalender continuous di host MacBook.
 - [ ] **TASK-6.4:** Monitoring konsumsi memori dan kestabilan koneksi RPC (target: zero crash).

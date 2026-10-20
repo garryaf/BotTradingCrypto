@@ -48,7 +48,7 @@ flowchart TD
     %% Alur Eksekusi Paper Trading
     RG_PASS --> CALC_SIZING[Hitung Sizing & Compounding<br/>Size = Equity x 0.005 / Delta SL]
     CALC_SIZING --> SUBMIT_ORDER[Buat Record paper_orders<br/>Status: SUBMITTED]
-    SUBMIT_ORDER --> SIM_EXEC[Simulasi Matching Engine Bybit/DEX<br/>Hitung Slippage Realistis & Biaya Fee]
+    SUBMIT_ORDER --> SIM_EXEC[Simulasi Matching Engine Binance/DEX<br/>Hitung Slippage Realistis & Biaya Fee]
     
     SIM_EXEC --> FILL_CHECK{Apakah Order Terisi<br/>Penuh atau Sebagian?}
     FILL_CHECK -- Sebagian --> RECORD_PARTIAL[Record paper_trades: PARTIAL_FILLED]

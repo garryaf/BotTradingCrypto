@@ -15,14 +15,14 @@ Prinsip fundamental sistem adalah: **AI memberikan analisis dan usulan sinyal, n
 ```
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
                       FLOW ARSITEKTUR AI CRYPTO AUTOTRADE (HYBRID ENGINE BLUEPRINT)
-  Hybrid Strategy │ Bybit Spot + Solana │ Paper Trading │ Risk 0.5% │ Daily Loss 2% │ Drawdown 8% │ Compounding Adaptif
+  Hybrid Strategy │ Binance Spot + Solana │ Paper Trading │ Risk 0.5% │ Daily Loss 2% │ Drawdown 8% │ Compounding Adaptif
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 ┌──────────────────────────────────────┐     ┌──────────────────────────────────────┐     ┌──────────────────────────────────────┐
 │ 1. MARKET DATA ENGINE                │     │ 2. AI SIGNAL & ANALYSIS              │     │ 3. RISK GATE                         │
 │    (Real-time & Historical Data)     │     │    (Multi-Timeframe + AI Model)      │     │    (Validasi Sebelum Eksekusi)       │
 │                                      │     │                                      │     │                                      │
-│ • Bybit API (Spot): WS & REST        │────►│ • Data Cleaning & Normalisasi        │────►│ • Expectancy Positif (setelah fee)   │
+│ • Binance API (Spot): WS & REST        │────►│ • Data Cleaning & Normalisasi        │────►│ • Expectancy Positif (setelah fee)   │
 │ • Solana Ingestion: RPC/WS & Helius  │     │ • Tech Analysis: EMA, RSI, MACD,     │     │ • Risk per Trade 0.5% (dari equity)  │
 │ • OHLCV Data: M1, M5, M15, H1, H4, D1│     │   ATR, VWAP, Support/Resistance      │     │ • Daily Loss Limit 2%                │
 │ • Order Book: Bid/Ask, Spread, Depth │     │ • Market Regime Detection:           │     │ • Drawdown Limit 8%                  │
@@ -39,9 +39,9 @@ Prinsip fundamental sistem adalah: **AI memberikan analisis dan usulan sinyal, n
 │ 6. BACKTESTING & VALIDATION          │     │ 5. PORTOFOLIO & COMPOUNDING          │     │ 4. EXECUTION ENGINE                  │
 │    (Uji Strategi Data Historis)      │     │    (Equity Management)               │     │    (Paper Trading Simulasi)          │
 │                                      │     │                                      │     │                                      │
-│ • Historical Data Bybit & Solana     │     │ • Position Sizing: Risk 0.5% Equity  │◄────│ • Simulasi Market / Limit Order      │
+│ • Historical Data Binance & Solana     │     │ • Position Sizing: Risk 0.5% Equity  │◄────│ • Simulasi Market / Limit Order      │
 │ • Realistic Fee, Slippage & Latency  │     │ • Compounding Adaptif: Reinvest      │     │ • Partial Fill Simulation            │
-│ • Walk-Forward Testing (In/Out sample│     │   profit, sesuaikan volatilitas      │     │ • Hitung Fee Bybit & Solana Slippage │
+│ • Walk-Forward Testing (In/Out sample│     │   profit, sesuaikan volatilitas      │     │ • Hitung Fee Binance & Solana Slippage │
 │ • Evaluasi: Expectancy, Profit Factor│     │ • Kurangi risiko saat drawdown       │     │ • Manajemen Posisi: Stop Loss, Take  │
 │   Win Rate, Maximum Drawdown         │     │ • Equity Ledger: High-Water Mark     │     │   Profit (TP), Trailing Stop,        │
 │   (Loop balik ke Optimasi Kotak 2)   │     │ • Metrics: Win Rate, Sharpe Ratio    │     │   Partial Take Profit (50% TP1)      │
@@ -78,8 +78,8 @@ Prinsip fundamental sistem adalah: **AI memberikan analisis dan usulan sinyal, n
    Redis bukan prasyarat wajib untuk MVP. Polling in-memory dan database PostgreSQL sudah memadai untuk beban kerja single-operator pada MacBook M1 Pro. Redis hanya diintegrasikan jika ada kebutuhan terukur untuk antrean background terdistribusi atau rate-limiting kecepatan tinggi.
 4. **Simulasi Tanpa Risiko / Paper Trading First (ADR-004):**
    Sistem dirancang secara mendasar untuk *paper trading* dan *backtesting*. Tidak ada fungsionalitas penandatanganan transaksi dengan kunci privat (*private key*) nyata pada fase ini.
-5. **Solana & Bybit Hybrid Data Engine (ADR-005):**
-   Spesifikasi ingestion dan model data dioptimalkan untuk instrumen likuiditas utama Bybit Spot dan karakteristik on-chain Solana (SPL Token, Account Model, DEX AMM Raydium/Orca).
+5. **Solana & Binance Hybrid Data Engine (ADR-005):**
+   Spesifikasi ingestion dan model data dioptimalkan untuk instrumen likuiditas utama Binance Spot dan karakteristik on-chain Solana (SPL Token, Account Model, DEX AMM Raydium/Orca).
 6. **Arsitektur Hibrida Python + Rust + React.js (ADR-006):**
    - **Frontend:** **React.js** melalui framework **Next.js 15 (TypeScript + Tailwind CSS)** untuk antarmuka visual responsif, grafik candlestick interaktif, dan status portofolio.
    - **AI Orchestration & API Layer (Python FastAPI):** Menjalankan Hermes Multi-Agent, Dynamic AI Skill System (`.agents/skills/`), adapter AI Model Gateway (OpenRouter, 9Route), serta antarmuka REST API dan Telegram bot.

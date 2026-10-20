@@ -166,7 +166,7 @@ Untuk menghemat konsumsi token LLM hingga 70% dan meningkatkan akurasi penalaran
 2. **`signal-scoring-hybrid`:** Berisi logika sintesis 3 pilar (Trend Following, Momentum Breakout, Mean Reversion), rumus Confidence Score, dan 4 filter eliminasi sinyal palsu.
 3. **`risk-gate-validation`:** Standar validasi 9 pintu risiko deterministik (Risk 0.5%, Daily Loss 2%, Drawdown 8%, Expectancy Positif, Cek Spread).
 4. **`position-sizing-compounding`:** Formula matematis lot sizing berdasarkan risiko 0.5% ekuitas, compounding adaptif, level TP1 (50% partial), TP2, dan trailing stop ATR.
-5. **`token-and-contract-safety`:** Prosedur audit on-chain token SPL Solana (freeze/mint authority, LP burn status) dan validasi precision Bybit Spot.
+5. **`token-and-contract-safety`:** Prosedur audit on-chain token SPL Solana (freeze/mint authority, LP burn status) dan validasi precision Binance Spot.
 
 ### 5.2 Keuntungan Penghematan & Agilitas
 - **Efisiensi Token:** System prompt dasar tetap ramping (~200 token). Skill spesifik hanya disuntikkan secara dinamis saat agen mengeksekusi sub-task relevan (~400 token), bukan memuat seluruh aturan ensiklopedia trading (~5.000 token) setiap saat.

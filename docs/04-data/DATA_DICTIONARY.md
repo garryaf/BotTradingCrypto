@@ -11,13 +11,13 @@ Dokumen ini mendefinisikan rincian kamus data struktural untuk seluruh tabel bas
 ---
 
 ## 1. Tabel: `wallets`
-Menyimpan data dompet on-chain Solana dan akun trader Bybit yang diobservasi atau dipantau.
+Menyimpan data dompet on-chain Solana dan akun trader Binance yang diobservasi atau dipantau.
 
 | Kolom | Tipe Data | Nullable | Default | Deskripsi & Aturan Bisnis | Contoh Nilai |
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key unik internal sistem. | `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` |
-| `address` | `VARCHAR(128)` | **NO** | — | Alamat publik on-chain Solana (Base58) atau Tag Akun Bybit. **UNIQUE**. | `8x2M...P9kQ` |
-| `chain` | `VARCHAR(32)` | **NO** | `'solana'` | Nama jaringan blockchain atau bursa (`solana` / `bybit_spot`). | `'solana'` |
+| `address` | `VARCHAR(128)` | **NO** | — | Alamat publik on-chain Solana (Base58) atau Tag Akun Binance. **UNIQUE**. | `8x2M...P9kQ` |
+| `chain` | `VARCHAR(32)` | **NO** | `'solana'` | Nama jaringan blockchain atau bursa (`solana` / `Binance_spot`). | `'solana'` |
 | `label` | `VARCHAR(64)` | YES | `NULL` | Nama alias yang diberikan pengguna untuk mempermudah identifikasi. | `'Smart Whale #1'` |
 | `status` | `VARCHAR(32)` | **NO** | `'DISCOVERED'` | Status dompet (`DISCOVERED`, `PENDING_REVIEW`, `ACTIVE_MONITORED`, `ARCHIVED`). | `'ACTIVE_MONITORED'` |
 | `composite_score` | `NUMERIC(5,2)` | YES | `0.00` | Skor performa historis (0.00 s.d. 100.00). | `78.50` |
@@ -39,9 +39,9 @@ Mencatat seluruh transaksi on-chain yang dilakukan oleh wallet yang dipantau.
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key unik. | `b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b22` |
 | `wallet_id` | `UUID` | **NO** | — | Foreign Key ke tabel `wallets(id)`. | `a0eebc99...` |
-| `tx_signature` | `VARCHAR(128)` | **NO** | — | Signature transaksi Base58 Solana / Order ID Bybit. **UNIQUE**. | `5UN...7yZ` |
+| `tx_signature` | `VARCHAR(128)` | **NO** | — | Signature transaksi Base58 Solana / Order ID Binance. **UNIQUE**. | `5UN...7yZ` |
 | `chain` | `VARCHAR(32)` | **NO** | `'solana'` | Jaringan asal transaksi. | `'solana'` |
-| `dex_protocol` | `VARCHAR(32)` | YES | `NULL` | Protokol DEX yang digunakan (`RAYDIUM`, `ORCA`, `JUPITER`, `BYBIT`). | `'RAYDIUM'` |
+| `dex_protocol` | `VARCHAR(32)` | YES | `NULL` | Protokol DEX yang digunakan (`RAYDIUM`, `ORCA`, `JUPITER`, `Binance`). | `'RAYDIUM'` |
 | `action` | `VARCHAR(32)` | **NO** | — | Jenis aksi: `BUY`, `SELL`, `TRANSFER_IN`, `TRANSFER_OUT`, `LP_ADD`, `LP_REMOVE`. | `'BUY'` |
 | `token_in_id` | `UUID` | YES | `NULL` | Foreign Key ke `tokens(id)` untuk token yang diserahkan. | `c2eebc99...` |
 | `token_out_id` | `UUID` | YES | `NULL` | Foreign Key ke `tokens(id)` untuk token yang diterima. | `d3eebc99...` |
@@ -57,13 +57,13 @@ Mencatat seluruh transaksi on-chain yang dilakukan oleh wallet yang dipantau.
 ---
 
 ## 3. Tabel: `tokens`
-Menyimpan master data aset kripto yang diperdagangkan (SPL Token Solana dan pasangan Bybit Spot).
+Menyimpan master data aset kripto yang diperdagangkan (SPL Token Solana dan pasangan Binance Spot).
 
 | Kolom | Tipe Data | Nullable | Default | Deskripsi & Aturan Bisnis | Contoh Nilai |
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key unik. | `c2eebc99-9c0b-4ef8-bb6d-6bb9bd380c33` |
-| `address` | `VARCHAR(128)` | **NO** | — | Mint address Solana (Base58) atau Simbol Bybit. **UNIQUE**. | `'SOLUSDT'` / `'DezX...PB263'` |
-| `chain` | `VARCHAR(32)` | **NO** | `'solana'` | Jaringan / venue (`solana` / `bybit_spot`). | `'bybit_spot'` |
+| `address` | `VARCHAR(128)` | **NO** | — | Mint address Solana (Base58) atau Simbol Binance. **UNIQUE**. | `'SOLUSDT'` / `'DezX...PB263'` |
+| `chain` | `VARCHAR(32)` | **NO** | `'solana'` | Jaringan / venue (`solana` / `Binance_spot`). | `'Binance_spot'` |
 | `symbol` | `VARCHAR(32)` | **NO** | — | Simbol ticker token. | `'SOL'` |
 | `name` | `VARCHAR(128)` | YES | `NULL` | Nama lengkap aset. | `'Solana'` |
 | `decimals` | `INT` | **NO** | `9` | Presisi desimal token. | `9` |
@@ -92,7 +92,7 @@ Data time-series harga pasar, spread bid-ask, dan likuiditas per menit.
 | `bid_price` | `NUMERIC(18,6)` | YES | `NULL` | Harga penawaran beli tertinggi (Best Bid). | `152.380000` |
 | `ask_price` | `NUMERIC(18,6)` | YES | `NULL` | Harga penawaran jual terendah (Best Ask). | `152.420000` |
 | `spread_pct` | `NUMERIC(6,4)` | YES | `0.0000` | Selisih persentase bid-ask. | `0.0262` |
-| `source` | `VARCHAR(32)` | **NO** | `'BYBIT_WS'` | Sumber data (`BYBIT_WS`, `HELIUS_RPC`, `RAYDIUM_POOL`). | `'BYBIT_WS'` |
+| `source` | `VARCHAR(32)` | **NO** | `'Binance_WS'` | Sumber data (`Binance_WS`, `HELIUS_RPC`, `RAYDIUM_POOL`). | `'Binance_WS'` |
 | `snapshot_time` | `TIMESTAMPTZ` | **NO** | — | Timestamp data diterbitkan dari sumber. | `2026-10-14 14:31:00+07` |
 | `is_stale` | `BOOLEAN` | **NO** | `FALSE` | True jika selisih waktu snapshot > 30 detik. | `FALSE` |
 
@@ -228,9 +228,9 @@ Mencatat order virtual dan transaksi pemenuhan eksekusi (*fills*) simulasi.
 | `executed_quantity` | `NUMERIC(24,8)`| **NO** | — | Kuantitas token yang terisi pada fill ini. | `16.79000000` |
 | `executed_price` | `NUMERIC(18,6)`| **NO** | — | Harga fill aktual setelah memperhitungkan slippage. | `152.480000` |
 | `slippage_pct` | `NUMERIC(6,4)` | **NO** | `0.0000` | Persentase slippage simulasi ($+0.052\%$). | `0.0525` |
-| `transaction_fee_usd` | `NUMERIC(12,4)`| **NO** | `0.0000` | Biaya bursa simulasi (Bybit 0.1% = $2.56 USD). | `2.5601` |
+| `transaction_fee_usd` | `NUMERIC(12,4)`| **NO** | `0.0000` | Biaya bursa simulasi (Binance 0.1% = $2.56 USD). | `2.5601` |
 | `gas_fee_native` | `NUMERIC(16,8)`| YES | `0.000005` | Biaya jaringan Solana simulasi. | `0.00000500` |
-| `execution_venue` | `VARCHAR(32)` | **NO** | `'BYBIT_SPOT_SIM'`| Venue simulasi (`BYBIT_SPOT_SIM` / `SOLANA_DEX_SIM`). | `'BYBIT_SPOT_SIM'` |
+| `execution_venue` | `VARCHAR(32)` | **NO** | `'Binance_SPOT_SIM'`| Venue simulasi (`Binance_SPOT_SIM` / `SOLANA_DEX_SIM`). | `'Binance_SPOT_SIM'` |
 | `executed_at` | `TIMESTAMPTZ` | **NO** | `CURRENT_TIMESTAMP` | Waktu trade terjadi. | `2026-10-14 14:32:02.150+07` |
 
 ---

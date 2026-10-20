@@ -7,7 +7,7 @@ flowchart TD
 
     CALC_LOT --> CREATE_ORDER[Buat Record paper_orders<br/>Status: SUBMITTED, Tipe: Market/Limit]
 
-    CREATE_ORDER --> MATCHING_SIM[Simulasi Matching Engine:<br/>• Ambil Harga Best Bid/Ask Terkini<br/>• Hitung Slippage Berbasis Kedalaman Pool/Book<br/>• Bebankan Fee Bybit Spot 0.1% / Solana 0.25%]
+    CREATE_ORDER --> MATCHING_SIM[Simulasi Matching Engine:<br/>• Ambil Harga Best Bid/Ask Terkini<br/>• Hitung Slippage Berbasis Kedalaman Pool/Book<br/>• Bebankan Fee Binance Spot 0.1% / Solana 0.25%]
 
     MATCHING_SIM --> FILL_SIM{Simulasi Pemenuhan Fill}
     FILL_SIM -- Partial Fill --> SET_PARTIAL[Status Order: PARTIAL_FILLED<br/>Buat Record paper_trades]

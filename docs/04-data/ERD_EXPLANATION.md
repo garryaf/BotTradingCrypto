@@ -72,4 +72,4 @@ Untuk menjamin latensi baca dashboard $\le 200$ ms dan latensi evaluasi risiko $
 | `positions` | `(status, symbol)` | **B-Tree** | Mempercepat pembacaan posisi terbuka aktif (`status = 'OPEN'`) oleh Matching Engine dan Dashboard. |
 | `paper_orders` | `(client_order_id)` | **UNIQUE B-Tree** | Mencegah pembuatan order duplikat dari antrean internal. |
 | `llm_requests` | `(requested_at DESC)` | **B-Tree** | Pengurutan audit trail inferensi model bahasa besar. |
-| `wallet_observations` | `(raw_payload)` | **GIN Index (jsonb_path_ops)** | Pencarian cepat atribut khusus dalam payload instruksi program Solana/Bybit. |
+| `wallet_observations` | `(raw_payload)` | **GIN Index (jsonb_path_ops)** | Pencarian cepat atribut khusus dalam payload instruksi program Solana/Binance. |

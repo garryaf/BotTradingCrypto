@@ -13,17 +13,17 @@ Dokumen ini memformalkan seluruh 13 keputusan arsitektur dan parameter operasion
 
 ## 1. Keputusan Desain & Baseline Arsitektur Terpilih
 
-### Q-01: Apakah Solana menjadi satu-satunya venue data pada MVP atau didukung Bybit Spot?
+### Q-01: Apakah Solana menjadi satu-satunya venue data pada MVP atau didukung Binance Spot?
 - **Status Keputusan:** **DISETUJUI (APPROVED)**
-- **Keputusan Arsitektur:** **Arsitektur Hibrida: Bybit Spot API untuk instrumen likuiditas utama (BTCUSDT, ETHUSDT, SOLUSDT) + Solana On-Chain DEX (Raydium/Orca) untuk token discovery & copy-trading.**
-- **Rasional:** Menggabungkan likuiditas institusional bursa terpusat (Bybit Spot WebSocket & REST) dengan peluang token desentralisasi on-chain Solana.
-- **Konsekuensi / Dampak Teknis:** Market Data Engine mendukung dua konektor data paralel: Bybit API Connector (Spot) dan Solana RPC/WebSocket Ingestion.
+- **Keputusan Arsitektur:** **Arsitektur Hibrida: Binance Spot API untuk instrumen likuiditas utama (BTCUSDT, ETHUSDT, SOLUSDT) + Solana On-Chain DEX (Raydium/Orca) untuk token discovery & copy-trading.**
+- **Rasional:** Menggabungkan likuiditas institusional bursa terpusat (Binance Spot WebSocket & REST) dengan peluang token desentralisasi on-chain Solana.
+- **Konsekuensi / Dampak Teknis:** Market Data Engine mendukung dua konektor data paralel: Binance API Connector (Spot) dan Solana RPC/WebSocket Ingestion.
 
 ---
 
 ### Q-02: Bagaimana frekuensi target pemantauan wallet & ingestion data (Periodik vs. Mendekati Real-Time)?
 - **Status Keputusan:** **DISETUJUI (APPROVED)**
-- **Keputusan Arsitektur:** **Pendekatan Hibrida: Polling Periodik adaptif 10-30 detik untuk Wallet Ingestion; WebSocket Stream Bybit & Solana untuk pasangan aktif.**
+- **Keputusan Arsitektur:** **Pendekatan Hibrida: Polling Periodik adaptif 10-30 detik untuk Wallet Ingestion; WebSocket Stream Binance & Solana untuk pasangan aktif.**
 - **Rasional:** Menggunakan WebSocket kontinu untuk ribuan transaksi di jaringan Solana akan langsung menghabiskan kuota *free-tier* RPC dalam hitungan jam. Polling periodik dengan interval adaptif (misal 15 detik untuk wallet aktif) jauh lebih hemat kuota.
 - **Konsekuensi / Dampak Teknis:** Transaksi copy-trading pada paper trading akan mengalami jeda latensi 10-30 detik di belakang transaksi asli on-chain. Hal ini realistis untuk dievaluasi terhadap *slippage* simulasi.
 
@@ -81,7 +81,7 @@ Dokumen ini memformalkan seluruh 13 keputusan arsitektur dan parameter operasion
   4. **Drawdown Limit:** Maksimal **8.0% dari High-Water Mark** (memicu pembekuan strategi otomatis untuk evaluasi manual).
   5. **Cek Spread & Likuiditas:** Tolak entry jika spread > 0.08% atau kedalaman pool tidak memadai.
   6. **Validasi Stop Loss:** Stop Loss wajib terdefinisi numerik secara eksplisit.
-  7. **Cek Saldo & Lot Size:** Memenuhi aturan minimum lot Bybit / DEX.
+  7. **Cek Saldo & Lot Size:** Memenuhi aturan minimum lot Binance / DEX.
   8. **Batas Posisi Terbuka Maksimal:** Maksimal jumlah posisi simultan sesuai batasan portofolio.
   9. **Freshness Data:** Feed data normal, latency $\le 30$ detik.
 - **Rasional:** Disiplin mutlak untuk melindungi portofolio dan memastikan profitabilitas jangka panjang.

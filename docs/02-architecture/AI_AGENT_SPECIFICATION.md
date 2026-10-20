@@ -34,13 +34,13 @@ Dokumen ini mendefinisikan kontrak antarmuka teknis, skema Pydantic, matriks hak
 ## 3. Rincian Kontrak Spesifikasi Tiap Agen
 
 ### 3.1 Token Safety Agent
-- **Tanggung Jawab:** Mengaudit smart contract token Solana SPL dan simbol Bybit Spot untuk mengeliminasi risiko *honeypot*, pencetakan tak terbatas, atau pembekuan saldo.
+- **Tanggung Jawab:** Mengaudit smart contract token Solana SPL dan simbol Binance Spot untuk mengeliminasi risiko *honeypot*, pencetakan tak terbatas, atau pembekuan saldo.
 - **Skill Terkait:** `.agents/skills/token-and-contract-safety/SKILL.md`
 - **Skema Masukan (Input Model):**
   ```python
   class TokenSafetyInput(BaseModel):
       token_address: str
-      chain: Literal["solana", "bybit_spot"]
+      chain: Literal["solana", "Binance_spot"]
       freeze_authority: Optional[str] = None
       mint_authority: Optional[str] = None
       top_10_holder_pct: float

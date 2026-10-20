@@ -19,14 +19,14 @@ graph TB
         AI_GATEWAY["AI Model Gateway<br/>(Router, Fallback, Quota Manager)"]
         RISK_ENGINE["Deterministic Risk Gate<br/>(Non-Bypassable Rule Engine)"]
         PAPER_BROKER["Paper Broker & Compounding Engine<br/>(Execution & Position Manager)"]
-        INGESTION["Hybrid Ingestion Engine<br/>(Solana On-Chain + Bybit Spot)"]
+        INGESTION["Hybrid Ingestion Engine<br/>(Solana On-Chain + Binance Spot)"]
         
         DB[("PostgreSQL 16 Database<br/>(Single Source of Truth)")]
         REDIS[("Redis 7 Cache<br/>[Opsional Memory Store]")]
     end
 
     subgraph EXTERNAL_SYSTEMS["Sistem & Layanan Eksternal"]
-        BYBIT_API["Bybit Spot API<br/>(WebSocket Real-time & REST OHLCV)"]
+        Binance_API["Binance Spot API<br/>(WebSocket Real-time & REST OHLCV)"]
         SOLANA_NET["Jaringan Solana RPC / Helius<br/>(Blok, Transaksi, SPL Token)"]
         MARKET_APIS["DEX Market Data APIs<br/>(DEXScreener / Birdeye / Raydium)"]
         LLM_PRIMARY["OpenRouter AI API<br/>(Claude / Llama / Gemini)"]
@@ -49,7 +49,7 @@ graph TB
 
     TG_BOT -->|Emergency Kill / Status| FASTAPI
 
-    INGESTION <-->|WSS & REST| BYBIT_API
+    INGESTION <-->|WSS & REST| Binance_API
     INGESTION <-->|HTTPS RPC & WSS| SOLANA_NET
     INGESTION <-->|HTTPS REST| MARKET_APIS
 

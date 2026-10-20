@@ -39,7 +39,7 @@ graph TB
     end
 
     subgraph LAYER_5["5. Ingestion & Data Layer"]
-        BYBIT_CONNECTOR["Bybit Spot Connector<br/>• WS Public/Private<br/>• REST OHLCV M1-D1"]
+        Binance_CONNECTOR["Binance Spot Connector<br/>• WS Public/Private<br/>• REST OHLCV M1-D1"]
         SOLANA_POLLER["Solana RPC/WS Poller<br/>(Adaptive 10-30s Interval)"]
         DEX_PARSER["DEX Swap Instruction Parser<br/>(Raydium AMM / Orca / Jupiter)"]
         DEDUPLICATOR["Signature Deduplicator<br/>(Unique Base58 Hash)"]
@@ -65,7 +65,7 @@ graph TB
     AUTH_MIDDLEWARE --> REPO_SIGNALS
     TG_CONTROLLER --> CIRCUIT_BREAKER
 
-    BYBIT_CONNECTOR --> DEDUPLICATOR
+    Binance_CONNECTOR --> DEDUPLICATOR
     SOLANA_POLLER --> DEX_PARSER
     DEX_PARSER --> DEDUPLICATOR
     DEDUPLICATOR --> REPO_WALLETS

@@ -43,14 +43,14 @@ Dokumen ini menguraikan struktur dekomposisi komponen internal platform **AUTO-T
 │ 4. DOMAIN & TRADING ENGINE LAYER (High-Performance Engine in Rust)          │
 │    ├── Deterministic Risk Gate (Sub-ms Rule Engine: 0.5% Risk, 2% Loss, 8% DD│
 │    ├── Strategy Engine & Versioning (Trend Following, Breakout, Mean Reversion
-│    ├── Paper Broker Matching (Slippage Model, Bybit Fee, Partial Fill Sim)  │
+│    ├── Paper Broker Matching (Slippage Model, Binance Fee, Partial Fill Sim)  │
 │    └── Compounding & Position State Manager (Memory-speed High-Water Mark)  │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ Persistensi State & Transaksi
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 5. INGESTION & DATA LAYER (High-Throughput in Rust)                         │
-│    ├── Bybit Spot WebSocket & REST Connector                                │
+│    ├── Binance Spot WebSocket & REST Connector                                │
 │    ├── Solana RPC / Geyser WebSocket Client                                 │
 │    ├── Swap Instruction Parser (Raydium / Orca / Jupiter)                   │
 │    └── Deduplicator (Base58 Signature Hash)                                 │
