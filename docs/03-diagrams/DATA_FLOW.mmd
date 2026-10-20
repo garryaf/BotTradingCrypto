@@ -12,12 +12,20 @@ graph LR
         DEDUP["Deduplicator<br/>(Base58 Signature Hash)"]
     end
 
+    subgraph INGESTION_ERRORS["2b. Ingestion Error Handling"]
+        PARSE_ERR["Parse Failure Handler<br/>• Corrupt / Unknown Format<br/>• Retry 1x → Drop + Log"]
+        DLQ[("Dead Letter Queue<br/>(ingestion_errors table)")]
+        STALE_FEED["Stale Feed Detector<br/>• Age > 30s → REJECT<br/>• Status: REJECTED_STALE_DATA"]
+    end
+
     subgraph STORAGE_RAW["3. Raw Persistence"]
         DB_OBS[("wallet_observations /<br/>market_snapshots")]
     end
 
     subgraph AI_PIPELINE["4. AI Multi-Agent & Skills"]
         SKILLS[(".agents/skills/<br/>Dynamic Skills")]
+        FRESHNESS_CHECK{"Freshness Gate<br/>Age ≤ 30s ?"}
+        AGGREGATOR["Market Data Aggregator<br/>(OHLCV, Indicators, Regime)"]
         HERMES["Hermes Orchestrator<br/>(Token, Market, Strategy)"]
         GW["AI Model Gateway<br/>(OpenRouter / 9Route)"]
     end
@@ -27,7 +35,7 @@ graph LR
     end
 
     subgraph RISK["6. Risk Gate (9 Pintu)"]
-        RG{"Risk Gate Engine<br/>• Risk 0.5%<br/>• Daily Loss 2%<br/>• Drawdown 8%<br/>• Expectancy > 0"}
+        RG{"Risk Gate Engine<br/>① Expectancy > 0<br/>② Risk ≤ 0.5% Equity<br/>③ Daily Loss ≤ 2%<br/>④ Drawdown ≤ 8%<br/>⑤ Spread ≤ 0.08% & Liquidity ≥ $50K<br/>⑥ Stop Loss Wajib Ada<br/>⑦ Saldo & Lot Size Valid<br/>⑧ Posisi Terbuka ≤ 5<br/>⑨ Market Condition OK"}
         NO_TRADE["Status: NO TRADE<br/>(Log Reject & Alert)"]
     end
 
@@ -51,10 +59,21 @@ graph LR
     SOLANA --> PARSER
     DEX_POOLS --> PARSER
 
-    PARSER --> DEDUP
-    DEDUP --> DB_OBS
+    %% [FIX 3.1] Failure paths eksplisit di ingestion pipeline
+    PARSER -->|Parse OK| DEDUP
+    PARSER -->|Parse FAIL<br/>Corrupt / Unknown| PARSE_ERR
+    PARSE_ERR -->|Retry Exhausted| DLQ
+    PARSE_ERR -.->|Alert: Parse Error Spike| ALERTS
+    DEDUP -->|New / Unique| DB_OBS
+    DEDUP -->|Duplicate<br/>Signature| DLQ
 
-    DB_OBS --> HERMES
+    %% [FIX 1.4] Aggregation layer antara raw storage dan Hermes
+    %% [FIX 3.2] Freshness check sebelum AGGREGATOR — early reject sebelum AI token terpakai
+    DB_OBS --> FRESHNESS_CHECK
+    FRESHNESS_CHECK -->|Data Segar < 30s| AGGREGATOR
+    FRESHNESS_CHECK -->|Stale > 30s| STALE_FEED
+    STALE_FEED --> DLQ
+    AGGREGATOR --> HERMES
     SKILLS -.->|On-Demand Loading| HERMES
     HERMES <--> GW
     HERMES --> SIG_DB
@@ -68,5 +87,10 @@ graph LR
     COMPOUND --> DB_TRADES
     COMPOUND --> DB_POS
 
+    %% [FIX 1.2] Alert dikirim SETELAH DB write confirmed, bukan langsung dari COMPOUND
+    DB_TRADES -->|Write Confirmed| ALERTS
+    DB_POS -->|Write Confirmed| ALERTS
     DB_POS --> DASHBOARD
-    COMPOUND --> ALERTS
+
+    %% [FIX 1.3] Feedback loop portfolio state real-time ke Hermes → Risk Gate
+    DB_POS -.->|Portfolio State<br/>(Posisi, Daily Loss, Drawdown)| HERMES

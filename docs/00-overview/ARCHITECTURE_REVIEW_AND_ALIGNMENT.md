@@ -63,3 +63,32 @@ Sesuai arahan pengguna (*"tambahkan juga skill nya untuk ai agent menghemat dan 
   3. `risk-gate-validation`: Standar validasi batas 0.5% risk, 2% daily loss, 8% drawdown limit, dan expectancy positif.
   4. `position-sizing-compounding`: Kalkulasi lot size dinamis, reinvestasi profit, dan penyesuaian drawdown.
   5. `token-and-contract-safety`: Aturan audit keamanan kontrak SPL token Solana dan spesifikasi symbol Bybit Spot.
+
+---
+
+## 5. Temuan & Implementasi Koreksi Diagram (Audit Log)
+
+Tabel ini mencatat temuan ketidaksesuaian arsitektur dan status implementasinya pada `DATA_FLOW.mmd`.
+
+| ID | Severity | Temuan | File Terdampak | Status | Tanggal Implementasi |
+|---|---|---|---|---|---|
+| **1.1** | ⚠️ | Node `RG` hanya menampilkan 4 dari 9 pintu Risk Gate, tidak konsisten dengan `risk-gate-validation/SKILL.md`. | `DATA_FLOW.mmd` baris 30 | ✅ **SELESAI** | 19 Oktober 2026 |
+| **1.2** | ⚠️ | `COMPOUND → ALERTS` langsung tanpa menunggu DB write confirmed — risiko notifikasi sukses saat pembukuan gagal (race condition). | `DATA_FLOW.mmd` baris 72 | ✅ **SELESAI** | 19 Oktober 2026 |
+| **1.3** | ℹ️ | Tidak ada feedback loop dari `DB_TRADES`/`DB_POS` ke Risk Gate — berpotensi stale state saat evaluasi sinyal baru. | `DATA_FLOW.mmd` (connector) | ✅ **SELESAI** | 19 Oktober 2026 |
+| **1.4** | ℹ️ | `HERMES` membaca langsung dari `DB_OBS` (raw storage) tanpa lapisan agregasi/transformasi eksplisit — tight coupling. | `DATA_FLOW.mmd` baris 57 | ✅ **SELESAI** | 19 Oktober 2026 |
+| **2.1** | ✅ | Klaim "hardcoded lock" ada di dokumentasi tanpa klarifikasi mekanisme enforcement runtime — bypassable dengan patch lokal jika hanya `if` statement. | `LIVE_TRADING_SAFETY_GATE.md` §1 | ✅ **SELESAI** | 19 Oktober 2026 |
+| **2.2** | ⚠️ | Kill Switch Drill mendefinisikan target ≤ 2 detik tanpa menetapkan T₀, T₁, tooling, definisi PASS/FAIL, dan skenario in-flight request. | `LIVE_TRADING_SAFETY_GATE.md` Kriteria 3 | ✅ **SELESAI** | 19 Oktober 2026 |
+| **2.3** | ℹ️ | Batas modal Burner Wallet hanya berupa kebijakan operasional — tidak ada enforcement teknis yang mencegah order jika saldo melebihi threshold. | `LIVE_TRADING_SAFETY_GATE.md` Kriteria 4 | ✅ **SELESAI** | 19 Oktober 2026 |
+| **3.1** | ⚠️ | Pipeline ingestion linear tanpa failure path — tidak ada visibilitas untuk "gagal parse", "data corrupt", atau "duplicate drop". | `DATA_FLOW.mmd` (INGESTION subgraph) | ✅ **SELESAI** | 19 Oktober 2026 |
+| **3.2** | ⚠️ | Tidak ada mekanisme eksplisit yang menyaring stale data (>30s) sebelum masuk ke HERMES — resources AI (token cost) terbuang untuk sinyal yang harusnya sudah ditolak di ingestion. | `DATA_FLOW.mmd` (AI_PIPELINE subgraph) | ✅ **SELESAI** | 19 Oktober 2026 |
+| **3.3** | ℹ️ | Model partial fill Paper Broker tidak terdokumentasi — risiko over-optimistic assumption yang memberikan false confidence pada 30 hari paper trading sebagai syarat Fase 7. | `DATA_FLOW.md` Tahap 7 | ✅ **SELESAI** | 19 Oktober 2026 |
+
+### Ringkasan Perubahan `DATA_FLOW.mmd`
+
+| Temuan | Sebelum | Sesudah |
+|---|---|---|
+| 1.1 | `RG` node: 4 parameter | `RG` node: 9 pintu bernomor (①–⑨) |
+| 1.2 | `COMPOUND --> ALERTS` | `DB_TRADES -->|Write Confirmed| ALERTS` dan `DB_POS -->|Write Confirmed| ALERTS` |
+| 1.3 | Tidak ada feedback loop | `DB_POS -.->|Portfolio State (Posisi, Daily Loss, Drawdown)| HERMES` (putus-putus) |
+| 1.4 | `DB_OBS --> HERMES` | `DB_OBS --> AGGREGATOR --> HERMES` (node `Market Data Aggregator` ditambahkan) |
+
