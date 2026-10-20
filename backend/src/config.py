@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     solana_rpc_url_override: str = ""
     data_freshness_max_age_sec: int = 30
 
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_api_key: str = ""
+    openrouter_default_model: str = "anthropic/claude-3.5-haiku"
+    nineroute_base_url: str = ""
+    nineroute_api_key: str = ""
+    nineroute_default_model: str = "google/gemini-flash-1.5"
+
     @property
     def solana_rpc_url(self) -> str:
         # Q-04: Helius Free Tier primer, Public RPC sebagai cadangan jika key belum diisi.

@@ -1,6 +1,6 @@
 ---
 name: token-and-contract-safety
-description: Keahlian AI agent untuk mengaudit keamanan smart contract SPL token Solana dan memvalidasi aturan simbol pasar Bybit Spot.
+description: Keahlian AI agent untuk mengaudit keamanan smart contract SPL token Solana dan memvalidasi aturan simbol pasar Binance Spot.
 ---
 
 # Token and Contract Safety Skill
@@ -23,9 +23,9 @@ Sebelum mempertimbangkan token di jaringan Solana, periksa 5 parameter wajib:
 5. **Usia Kolam Likuiditas:**
    - Waktu pembuatan pool minimal $\ge 24$ jam untuk menghindari manipulasi sniper detik awal.
 
-## 2. Validasi Simbol Pasar (Bybit Spot Rules)
+## 2. Validasi Simbol Pasar (Binance Spot Rules)
 
-Untuk instrumen spot bursa terpusat (Bybit Spot):
+Untuk instrumen spot bursa terpusat (Binance Spot):
 1. **Status Simbol:** `status == "Trading"` (Bukan dalam status suspend atau delisting).
 2. **Likuiditas & Volume Minimum:** Volume transaksi 24 jam pasangan trading harus $\ge \$1.000.000$ USD.
 3. **Kepatuhan Precision:**
@@ -38,7 +38,7 @@ Untuk instrumen spot bursa terpusat (Bybit Spot):
 ```json
 {
   "asset_identifier": "SOLUSDT",
-  "venue_type": "BYBIT_SPOT",
+  "venue_type": "BINANCE_SPOT",
   "contract_safety_score": 98.0,
   "risk_classification": "SAFE_FOR_TRADING",
   "checks_passed": {

@@ -39,7 +39,7 @@ Ambang Batas Kelulusan:
 
 ```json
 {
-  "signal_id": "sig-bybit-20261014-001",
+  "signal_id": "sig-binance-20261014-001",
   "symbol": "SOLUSDT",
   "strategy_type": "MOMENTUM_BREAKOUT",
   "action": "BUY",

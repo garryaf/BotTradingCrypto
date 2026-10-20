@@ -17,7 +17,7 @@ Gunakan skill ini untuk menguji apakah usulan order perdagangan mematuhi gerbang
 | **4. Drawdown Limit** | **Maksimum 8.0% dari High-Water Mark portofolio**. | Drawdown akumulatif $\ge 8.0\%$. Memicu Circuit Breaker pembekuan strategi. |
 | **5. Cek Spread & Likuiditas** | Spread bid-ask $\le 0.08\%$; Kedalaman orderbook 2% $\ge \$50.000$ USD. | Spread lebar atau likuiditas dangkal yang memicu slippage tinggi. |
 | **6. Validasi Stop Loss** | Stop Loss **WAJIB ADA** dan terdefinisi secara numerik di level logis pasar. | Order tanpa Stop Loss atau jarak SL melebihi toleransi risiko 0.5%. |
-| **7. Cek Saldo & Lot Size** | Ukuran lot harus memenuhi `min_lot_size` dan `tick_size` exchange (Bybit Spot / Solana AMM). | Saldo kas tidak mencukupi untuk memenuhi lot minimum. |
+| **7. Cek Saldo & Lot Size** | Ukuran lot harus memenuhi `min_lot_size` dan `tick_size` exchange (Binance Spot / Solana AMM). | Saldo kas tidak mencukupi untuk memenuhi lot minimum. |
 | **8. Tidak Melanggar Aturan** | Jumlah posisi terbuka simultan tidak melebihi batas (maks 3-5 posisi). | Melebihi kuota posisi terbuka. |
 | **9. Market Condition OK** | Status pasar tidak dalam kondisi anomali ekstrem atau flash-crash; latency feed data normal. | Feed harga mengalami keterlambatan (*stale* > 30 detik). |
 
@@ -40,7 +40,7 @@ Gunakan skill ini untuk menguji apakah usulan order perdagangan mematuhi gerbang
 
 ```json
 {
-  "signal_id": "sig-bybit-20261014-001",
+  "signal_id": "sig-binance-20261014-001",
   "passed_risk_gate": true,
   "calculated_risk_pct": 0.5,
   "allocated_risk_usd": 51.22,

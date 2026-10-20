@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from .agents.hermes import run_hermes_loop
 from .db import engine
 from .ingestion.aggregator import run_aggregator
 from .ingestion.binance import run_binance_ingestion
@@ -16,6 +17,7 @@ async def lifespan(_: FastAPI):
         asyncio.create_task(run_binance_ingestion()),
         asyncio.create_task(run_solana_ingestion()),
         asyncio.create_task(run_aggregator()),
+        asyncio.create_task(run_hermes_loop()),
     ]
     yield
     for task in tasks:
