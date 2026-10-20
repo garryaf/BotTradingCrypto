@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { BullMascot } from "./mascots/BullMascot";
+import { BearMascot } from "./mascots/BearMascot";
 
 /** Full-screen bull/bear run-in, shown once per session when the portfolio first loads. */
 export function ProfitLossSplash({
@@ -37,9 +39,13 @@ export function ProfitLossSplash({
             style={{
               filter: `drop-shadow(0 0 70px rgba(${rgb},0.85)) drop-shadow(0 0 140px rgba(${rgb},0.4))`,
             }}
-            className="select-none text-[180px] leading-none sm:text-[240px]"
+            className={`select-none ${positive ? "text-profit" : "text-loss"}`}
           >
-            {positive ? "🐂" : "🐻"}
+            {positive ? (
+              <BullMascot className="h-[220px] w-auto sm:h-[300px]" />
+            ) : (
+              <BearMascot className="h-[220px] w-auto sm:h-[300px]" />
+            )}
           </motion.div>
 
           <motion.p

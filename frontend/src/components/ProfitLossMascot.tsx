@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { BullMascot } from "./mascots/BullMascot";
+import { BearMascot } from "./mascots/BearMascot";
 
 /** Bull when the portfolio is up today, bear when it's down — swaps with a soft spring. */
 export function ProfitLossMascot({ positive }: { positive: boolean }) {
@@ -33,10 +35,10 @@ export function ProfitLossMascot({ positive }: { positive: boolean }) {
           y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" },
           filter: { duration: 2.2, repeat: Infinity, ease: "easeInOut" },
         }}
-        className="inline-block select-none text-3xl leading-none"
+        className={`inline-block select-none ${positive ? "text-profit" : "text-loss"}`}
         title={positive ? "Portofolio profit hari ini" : "Portofolio rugi hari ini"}
       >
-        {positive ? "🐂" : "🐻"}
+        {positive ? <BullMascot className="h-9 w-auto" /> : <BearMascot className="h-9 w-auto" />}
       </motion.span>
     </AnimatePresence>
   );
