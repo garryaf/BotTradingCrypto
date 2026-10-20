@@ -27,6 +27,7 @@ async def get_portfolio(session: AsyncSession = Depends(get_session)):
         "equity_usd": latest.total_equity_usd,
         "cash_balance_usd": latest.cash_balance_usd,
         "open_positions_value_usd": latest.open_positions_value_usd,
+        "daily_realized_pnl_usd": latest.daily_realized_pnl_usd,
         "daily_loss_pct": latest.daily_loss_pct,
         "current_drawdown_pct": latest.current_drawdown_pct,
         "high_water_mark_usd": latest.high_water_mark_usd,
@@ -43,6 +44,7 @@ async def get_positions(session: AsyncSession = Depends(get_session)):
     rows = (await session.exec(select(Position).order_by(Position.opened_at.desc()).limit(50))).all()
     return [
         {
+            "id": str(p.id),
             "symbol": p.symbol,
             "status": p.status,
             "quantity": p.current_quantity,

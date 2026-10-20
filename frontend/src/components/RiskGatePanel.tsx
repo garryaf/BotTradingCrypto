@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
@@ -70,10 +71,17 @@ export function RiskGatePanel() {
         {GATES.map((gate) => {
           const passed = check[gate.key] as boolean;
           return (
-            <div key={gate.key} className="flex items-center gap-2 rounded-md border border-border-soft px-2.5 py-1.5">
+            <motion.div
+              key={gate.key}
+              animate={!passed ? { x: [0, -3, 3, -3, 3, 0] } : {}}
+              transition={{ duration: 0.4 }}
+              className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 ${
+                passed ? "border-border-soft" : "border-loss/40 bg-loss/5"
+              }`}
+            >
               {passed ? <Check size={13} className="text-profit" /> : <X size={13} className="text-loss" />}
               <span className="text-[11px] text-text-muted">{gate.label}</span>
-            </div>
+            </motion.div>
           );
         })}
       </div>

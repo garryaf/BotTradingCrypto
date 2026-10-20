@@ -3,12 +3,15 @@
 import { motion } from "framer-motion";
 import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
+import { PnlGlow } from "./PnlGlow";
+import { CountUp } from "./CountUp";
 
 type PortfolioResponse = {
   connected: boolean;
   equity_usd: number;
   cash_balance_usd: number;
   open_positions_value_usd: number;
+  daily_realized_pnl_usd: number;
   daily_loss_pct: number;
   current_drawdown_pct: number;
   high_water_mark_usd: number;
@@ -67,7 +70,7 @@ export function EquityHero() {
     );
   }
 
-  const dailyProfit = data.daily_loss_pct <= 0;
+  const dailyProfit = data.daily_realized_pnl_usd >= 0;
   const equityPoints = data.history.map((h) => h.equity);
 
   return (
@@ -77,9 +80,15 @@ export function EquityHero() {
           <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-faint">
             Equity Portofolio (Paper)
           </h2>
-          <p className="font-mono text-2xl font-semibold text-text">
-            ${data.equity_usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
+          <PnlGlow positive={dailyProfit}>
+            <p className="font-mono text-2xl font-semibold text-text">
+              $
+              <CountUp
+                value={data.equity_usd}
+                format={(n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              />
+            </p>
+          </PnlGlow>
         </div>
         <Sparkline points={equityPoints} />
       </div>
@@ -87,8 +96,8 @@ export function EquityHero() {
         <Stat label="Kas" value={`$${data.cash_balance_usd.toFixed(2)}`} />
         <Stat label="Posisi" value={`$${data.open_positions_value_usd.toFixed(2)}`} />
         <Stat
-          label="Daily Loss"
-          value={`${data.daily_loss_pct.toFixed(2)}%`}
+          label="Daily PnL"
+          value={`${dailyProfit ? "+" : ""}$${data.daily_realized_pnl_usd.toFixed(2)}`}
           tone={dailyProfit ? "profit" : "loss"}
         />
         <Stat
