@@ -28,7 +28,7 @@
 | **Fase 3** | AI Model Gateway (OpenRouter + 9Route Fallback) & Hermes Multi-Agent Orchestrator | ✅ **SELESAI** (butuh API key asli untuk jalan live) |
 | **Fase 4** | Deterministic Risk Gate (9 Pintu) & Paper Broker Matching Engine Simulator | ✅ **SELESAI** |
 | **Fase 5** | Frontend Web Dashboard (Next.js 15) & Telegram Control Bot (/kill switch) | ✅ **SELESAI** (bot Telegram butuh token asli untuk jalan live) |
-| **Fase 6** | Engine Backtesting Historis & Paper Trading Soak Test (30 Hari Stabilitas) | 📅 *Terjadwal* |
+| **Fase 6** | Engine Backtesting Historis & Paper Trading Soak Test (30 Hari Stabilitas) | 🟡 *Sebagian — engine selesai, profit factor 0.41 (<1.25), soak test 30 hari belum dimulai* |
 | **Fase 7** | Live Trading Safety Gate (Kondisional: Burner Wallet & Multi-Step Approval) | 🔒 *Terkunci* |
 
 Detail rincian task setiap fase dapat dibaca pada [docs/00-overview/ROADMAP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/00-overview/ROADMAP.md).

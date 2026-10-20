@@ -133,6 +133,8 @@ flowchart TD
 
 **Kriteria Selesai (Milestone 6):** Laporan backtest menunjukkan profit factor > 1.25; paper soak test berjalan 30 hari kalender dengan Net PnL positif setelah fee dan zero unhandled crash.
 
+**Status:** 🟡 **SEBAGIAN** — Engine backtesting (TASK-6.1/6.2) selesai & terverifikasi: menarik data Binance historis, walk-forward split 70/30, anti-look-ahead bias terbukti via self-check (AC-SIM-03), dan reuse Risk Gate + Paper Broker asli dari Fase 4 (bukan simulator mainan terpisah). **Run live 60 hari BTCUSDT jujur menunjukkan profit factor 0.41** (di bawah target >1.25) — strategi proxy EMA20/50+RSI yang dipakai untuk backtest adalah pengganti deterministik karena strategi asli memerlukan panggilan LLM per-bar yang tidak feasible/terjangkau untuk ribuan candle historis. Kriteria profit factor Milestone 6 baru bisa dievaluasi jujur setelah Hermes (Fase 3) jalan live dengan API key asli. Soak test 30 hari kalender (TASK-6.3/6.4) belum bisa dimulai — secara fisik butuh 30 hari waktu nyata berjalan, tidak bisa dipercepat.
+
 ---
 
 ### Fase 7 — Kesiapan Live Trading Safety Gate (Kondisional / Pasca-MVP)
