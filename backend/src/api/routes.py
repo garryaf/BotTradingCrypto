@@ -1,8 +1,12 @@
 """REST API for the Web Dashboard — ROADMAP.md TASK-5.2/5.3."""
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from ..backtest.data import fetch_historical_bars
+from ..backtest.engine import run_backtest
 from ..db import get_session
 from ..models import PortfolioSnapshot, Position, RiskCheck, TradingSignal
 from . import control as control_actions
@@ -115,3 +119,11 @@ async def control_resume(session: AsyncSession = Depends(get_session)):
 @router.get("/control/status")
 async def control_status(session: AsyncSession = Depends(get_session)):
     return await control_actions.system_status(session)
+
+
+@router.get("/backtest/run")
+async def backtest_run(symbol: str = "BTCUSDT", days: int = 60, interval: str = "1h"):
+    """ROADMAP.md TASK-6.1/6.2 — on-demand, not persisted (no backtest table in DATA_DICTIONARY.md)."""
+    bars = await fetch_historical_bars(symbol, interval=interval, days=days)
+    report = run_backtest(bars, initial_capital=Decimal(10000))
+    return {"symbol": symbol, "interval": interval, "requested_days": days, **report}
