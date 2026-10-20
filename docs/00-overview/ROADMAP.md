@@ -75,6 +75,8 @@ flowchart TD
 
 **Kriteria Selesai (Milestone 3):** Prompt evaluasi menghasilkan sinyal terstruktur valid, fallback provider berfungsi saat primer di-mock error HTTP 500, prompt injection tidak mengubah skema output.
 
+**Status:** ✅ **SELESAI** (scaffold + self-check via mock, bukan live call — belum ada API key asli dikonfigurasi). Ketiga kriteria milestone diverifikasi dengan `httpx.MockTransport`: fallback OpenRouter→9Route sukses saat primer di-mock 500, skema Pydantic menolak `action` di luar kontrak, dan key tambahan yang disusupkan ke output LLM otomatis gugur. Hermes loop idle otomatis (bukan crash-loop) selama `OPENROUTER_API_KEY`/`NINEROUTE_API_KEY` masih placeholder.
+
 ---
 
 ### Fase 4 — Deterministic Risk Gate & Paper Broker Simulator (Target: 1-2 Minggu)
