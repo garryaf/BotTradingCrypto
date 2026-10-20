@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Activity, Boxes } from "lucide-react";
 import { KillSwitch } from "./KillSwitch";
+import { TradingMascot } from "./TradingMascot";
 
 const NAV = [
   { href: "/", label: "Dashboard" },
@@ -29,6 +30,8 @@ export function AppHeader() {
             <p className="text-[11px] text-text-faint">Hermes Multi-Agent Orchestrator</p>
           </div>
         </div>
+
+        <TradingMascot />
 
         <nav className="flex items-center gap-1 rounded-lg border border-border-soft p-0.5">
           {NAV.map((item) => (
