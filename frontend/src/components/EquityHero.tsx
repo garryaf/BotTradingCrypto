@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
 import { PnlGlow } from "./PnlGlow";
 import { CountUp } from "./CountUp";
 import { ProfitLossMascot } from "./ProfitLossMascot";
+import { ProfitLossSplash } from "./ProfitLossSplash";
 
 type PortfolioResponse = {
   connected: boolean;
@@ -56,6 +58,17 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "pr
 
 export function EquityHero() {
   const data = usePolling<PortfolioResponse>("/api/v1/portfolio", 5000);
+  const [showSplash, setShowSplash] = useState(false);
+  const hasShownSplash = useRef(false);
+
+  useEffect(() => {
+    if (data?.connected && !hasShownSplash.current) {
+      hasShownSplash.current = true;
+      setShowSplash(true);
+      const timer = setTimeout(() => setShowSplash(false), 3200);
+      return () => clearTimeout(timer);
+    }
+  }, [data?.connected]);
 
   if (!data || !data.connected) {
     return (
@@ -76,6 +89,12 @@ export function EquityHero() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-border bg-bg-panel p-5">
+      <ProfitLossSplash
+        show={showSplash}
+        positive={dailyProfit}
+        amount={data.daily_realized_pnl_usd}
+        onExitComplete={() => {}}
+      />
       <div className="flex items-start justify-between">
         <div>
           <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-faint">
