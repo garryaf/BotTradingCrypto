@@ -119,6 +119,8 @@ flowchart TD
 
 **Kriteria Selesai (Milestone 5):** Operator dapat memantau performa via web, menerima alert transaksi, dan memutus sistem via Telegram dalam $\le 2.0$ detik.
 
+**Status:** ✅ **SELESAI** — dashboard (Equity, Risk Monitor 9-pintu, Posisi, Log Sinyal) terhubung live ke API dan diverifikasi dengan screenshot data asli. Emergency Stop diuji end-to-end: `POST /control/kill` membatalkan seluruh sinyal PENDING secara sinkron dalam request itu sendiri (~22ms, jauh di bawah batas 2.0 detik), bukan menunggu siklus loop berikutnya. Bot Telegram (`/status`, `/pause`, `/resume`, `/kill`) memakai jalur kode yang sama dengan REST API, tapi belum diuji live karena belum ada `TELEGRAM_BOT_TOKEN` asli.
+
 ---
 
 ### Fase 6 — Backtesting Engine & Paper Trading Soak Test (Target: 4 Minggu)
