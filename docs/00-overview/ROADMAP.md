@@ -58,6 +58,8 @@ flowchart TD
 
 **Kriteria Selesai (Milestone 2):** Data pasar Binance dan on-chain Solana tersimpan di database secara teratur, duplikasi signature ditolak 100%, data stale tidak masuk pipeline agregasi.
 
+**Status:** ✅ **SELESAI** — diverifikasi live (bukan hanya baca kode): Binance REST polling tersimpan ke `market_snapshots` tiap 10 detik, Solana ingestion diuji end-to-end terhadap wallet nyata via Public RPC (fallback Q-04) dan berhasil ter-parse ke `wallet_observations`, duplikasi & data stale masuk `ingestion_errors` (DLQ), serta agregasi M1/M5/H1 ke `market_ohlcv` terbukti jalan.
+
 ---
 
 ### Fase 3 — AI Model Gateway & Hermes Agent Orchestrator (Target: 1-2 Minggu)
