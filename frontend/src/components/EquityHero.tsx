@@ -5,6 +5,7 @@ import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
 import { PnlGlow } from "./PnlGlow";
 import { CountUp } from "./CountUp";
+import { ProfitLossMascot } from "./ProfitLossMascot";
 
 type PortfolioResponse = {
   connected: boolean;
@@ -80,15 +81,18 @@ export function EquityHero() {
           <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-faint">
             Equity Portofolio (Paper)
           </h2>
-          <PnlGlow positive={dailyProfit}>
-            <p className="font-mono text-2xl font-semibold text-text">
-              $
-              <CountUp
-                value={data.equity_usd}
-                format={(n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              />
-            </p>
-          </PnlGlow>
+          <div className="flex items-center gap-2.5">
+            <PnlGlow positive={dailyProfit}>
+              <p className={`font-mono text-2xl font-semibold ${dailyProfit ? "text-profit" : "text-loss"}`}>
+                $
+                <CountUp
+                  value={data.equity_usd}
+                  format={(n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                />
+              </p>
+            </PnlGlow>
+            <ProfitLossMascot positive={dailyProfit} />
+          </div>
         </div>
         <Sparkline points={equityPoints} />
       </div>
