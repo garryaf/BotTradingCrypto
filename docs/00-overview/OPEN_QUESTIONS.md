@@ -2,7 +2,7 @@
 **Dokumen:** `docs/00-overview/OPEN_QUESTIONS.md`  
 **Proyek:** AI Crypto Trading & Copy-Trading Platform (AUTO-TRADE-AA)  
 **Versi:** 1.0.0 (Tahap 0)  
-**Status:** Menunggu Keputusan Pengguna (*Awaiting Human Decision*)  
+**Status:** Disetujui sebagai Baseline Implementasi (*Approved Baseline Architecture*)  
 
 ---
 
