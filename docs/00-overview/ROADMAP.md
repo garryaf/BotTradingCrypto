@@ -101,6 +101,8 @@ flowchart TD
 
 **Kriteria Selesai (Milestone 4):** 100% sinyal cacat tertolak di pintu risiko; simulasi transaksi mencatat pembukuan presisi tanpa kebocoran deviasi kas vs ekuitas ($= 0.00$).
 
+**Status:** ✅ **SELESAI** — 18 self-check matematis murni (satu per jalur penolakan tiap pintu) lolos semua, dan verifikasi live: sinyal BTCUSDT manual lolos 9 pintu, terisi dengan slippage/fee realistis, posisi terbuka, dan 3 snapshot portofolio berturut-turut menunjukkan `total_equity_usd = cash + positions_value` presisi (deviasi 0.00).
+
 ---
 
 ### Fase 5 — UI Web Dashboard & Telegram Bot Control (Target: 1 Minggu)
