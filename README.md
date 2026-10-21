@@ -147,16 +147,27 @@ TELEGRAM_ALLOWED_CHAT_ID=
 
 ---
 
-### Step 3: Jalankan Database & Backend via Docker Compose
-Jalankan container PostgreSQL dan FastAPI Backend:
+### Step 3: Jalankan Service via Docker Compose
+Jalankan seluruh service (`postgres`, `backend`, dan `frontend`) dalam satu perintah:
 ```bash
-docker compose up -d --build postgres backend
+docker compose up -d --build
 ```
+
+> 💡 **Opsi Alternatif (Development Frontend Hot-Reload):**  
+> Jika Anda sedang mengedit kode antarmuka frontend dan ingin fitur hot-reload instan:
+> ```bash
+> # 1. Jalankan backend dan database saja di Docker:
+> docker compose up -d postgres backend
+> 
+> # 2. Jalankan frontend di host lokal (Node.js 20):
+> cd frontend && npm install && npm run dev
+> ```
 
 Sistem akan otomatis:
 1. Menyalakan PostgreSQL dan menunggu inisialisasi sampai status *healthy*.
 2. Menjalankan migrasi database via Alembic (`alembic upgrade head`) untuk membuat 21 tabel.
 3. Menjalankan server FastAPI pada port `8000`.
+4. Menjalankan dashboard web Next.js 15 pada port `3000`.
 
 **Verifikasi status backend:**
 ```bash
@@ -172,15 +183,9 @@ docker compose logs -f backend
 
 ---
 
-### Step 4: Jalankan Frontend Dashboard (Next.js)
-Buka tab terminal baru dan jalankan frontend:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
+### Step 4: Akses Dashboard Web
 Buka peramban (browser) di: **`http://localhost:3000`**
+Dashboard interaktif akan langsung menampilkan portofolio virtual, status maskot Bull/Bear, sinyal trading aktif, dan kontrol darurat.
 
 ---
 
