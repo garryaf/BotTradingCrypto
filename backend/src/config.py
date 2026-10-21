@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_api_key: str = ""
-    openrouter_default_model: str = "anthropic/claude-3.5-haiku"
+    openrouter_default_model: str = "anthropic/claude-haiku-5.5"
     nineroute_base_url: str = ""
     nineroute_api_key: str = ""
     nineroute_default_model: str = "google/gemini-flash-1.5"

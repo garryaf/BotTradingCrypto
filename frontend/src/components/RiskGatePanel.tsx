@@ -27,7 +27,7 @@ type RiskStatus = {
   } | null;
 };
 
-const GATES: { key: keyof RiskStatus["latest_check"] & string; label: string }[] = [
+const GATES: { key: keyof NonNullable<RiskStatus["latest_check"]>; label: string }[] = [
   { key: "expectancy_check", label: "1. Positive Expectancy" },
   { key: "risk_per_trade_check", label: "2. Risk per Trade ≤ 0.5%" },
   { key: "daily_loss_check", label: "3. Daily Loss ≤ 2%" },

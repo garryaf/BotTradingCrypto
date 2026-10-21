@@ -36,7 +36,6 @@ export function BearMascot({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
-        {...outline}
       />
       <path d="M26 66 L14 54 M32 70 L22 56 M38 76 L30 60" stroke="black" strokeWidth={4} strokeLinecap="round" />
 
@@ -53,7 +52,6 @@ export function BearMascot({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
-        {...outline}
       />
       <path d="M194 66 L206 54 M188 70 L198 56 M182 76 L190 60" stroke="black" strokeWidth={4} strokeLinecap="round" />
 
@@ -76,7 +74,6 @@ export function BearMascot({ className }: { className?: string }) {
         strokeWidth={5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        {...outline}
       />
 
       {/* angry brow */}
