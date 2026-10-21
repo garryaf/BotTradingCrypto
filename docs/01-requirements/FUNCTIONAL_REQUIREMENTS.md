@@ -114,12 +114,12 @@ Dokumen ini memuat spesifikasi kebutuhan fungsional sistem yang terbagi ke dalam
 ## Modul 5: Trading Simulation & Accounting (Paper Broker & Compounding Engine)
 
 ### FR-SIM-01: Pembuatan & Pencocokan Paper Order (Order Matching & Fees)
-- **Deskripsi:** Sistem harus membuat order virtual berbasis sinyal yang lolos verifikasi risiko dan mensimulasikan pemenuhan order (*fill*) berdasarkan harga pasar real-time Binance Spot atau Solana DEX.
+- **Deskripsi:** Sistem harus membuat order virtual berbasis sinyal yang lolos verifikasi risiko dan mensimulasikan pemenuhan order (*fill*) berdasarkan harga pasar real-time bursa CEX (Binance Spot primer, Bybit Spot sekunder roadmap) atau Solana DEX.
 - **Input:** Objek `trading_signals` yang lolos `risk_checks`.
 - **Proses:**
   - Menghitung besaran lot berbasis rumus risiko 0.5% ekuitas: $\text{Size} = (\text{Equity} \times 0.005) / |\text{Entry} - \text{SL}|$.
   - Mensimulasikan tipe order (Market / Limit Order) beserta potensi *Partial Fill*.
-  - Membebankan biaya transaksi realistis (Fee Binance Spot Taker 0.1% atau Solana DEX Fee 0.25% + Gas Fee 0.000005 SOL) serta estimasi *slippage*.
+  - Membebankan biaya transaksi realistis (Fee Taker 0.10% untuk Binance Spot / Bybit Spot, atau Solana DEX Fee 0.25% + Gas Fee 0.000005 SOL) serta estimasi *slippage*.
 - **Output:** Record `paper_orders` dan record `paper_trades` dengan status `FILLED` atau `PARTIAL_FILLED`.
 - **Kriteria Verifikasi:** Saldo kas virtual dan saldo token virtual terbarui secara akurat sesuai kaidah pembukuan ganda.
 

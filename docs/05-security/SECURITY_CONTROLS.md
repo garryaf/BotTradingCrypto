@@ -16,9 +16,9 @@ Dokumen ini merinci implementasi kendali keamanan teknis bertingkat (*Defense-in
    - Seluruh endpoint kontrol backend FastAPI (di luar `/health`) mewajibkan penyertaan header `X-API-Key` yang dicocokkan dengan variabel rahasia `BACKEND_API_SECRET`.
    - Permintaan tanpa header atau dengan nilai yang salah ditolak dengan HTTP `401 Unauthorized`.
 2. **Pembatasan Lintas Sumber Ketat (CORS Policy):**
-   - Middleware CORS FastAPI hanya mengizinkan origin dari antarmuka web lokal:  
-     `allow_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]`.
-   - Penggunaan wildcard (`*`) dilarang keras.
+   - Middleware CORS FastAPI dikonfigurasikan secara dinamis melalui variabel lingkungan `CORS_ORIGINS` di `.env` (default lokal: `http://localhost:3000`).
+   - Pada server produksi, origin wajib diarahkan ke domain resmi frontend (contoh: `https://trade.domainanda.com`, dipisahkan koma jika multi-domain).
+   - Penggunaan wildcard (`*`) dilarang keras di production.
 3. **Penyaringan Ukuran Payload:**
    - Pembatasan ukuran maksimum request HTTP masuk dibatasi hingga 1 MB untuk mencegah serangan buffer overflow atau kehabisan memori.
 

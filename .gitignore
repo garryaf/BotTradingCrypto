@@ -21,6 +21,10 @@ venv/
 build/
 dist/
 
+# Rust
+target/
+**/target/
+
 # Node / Frontend
 node_modules/
 .next/

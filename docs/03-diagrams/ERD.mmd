@@ -26,7 +26,7 @@ erDiagram
     WALLETS {
         uuid id PK
         varchar address UK "Alamat publik on-chain / Binance Account Tag"
-        varchar chain "solana / Binance_spot"
+        varchar chain "solana / binance_spot / bybit_spot"
         varchar label "Nama alias dompet / trader"
         varchar status "DISCOVERED / PENDING_REVIEW / ACTIVE_MONITORED / ARCHIVED"
         numeric composite_score "Skor kinerja (0.00 - 100.00)"
@@ -44,8 +44,8 @@ erDiagram
         uuid id PK
         uuid wallet_id FK
         varchar tx_signature UK "Hash unik transaksi Base58 / Binance Order ID"
-        varchar chain "solana / Binance_spot"
-        varchar dex_protocol "RAYDIUM / ORCA / JUPITER / Binance"
+        varchar chain "solana / binance_spot / bybit_spot"
+        varchar dex_protocol "RAYDIUM / ORCA / JUPITER / BINANCE / BYBIT"
         varchar action "BUY / SELL / TRANSFER_IN / TRANSFER_OUT / LP_ADD / LP_REMOVE"
         uuid token_in_id FK "Token yang diserahkan"
         uuid token_out_id FK "Token yang diterima"
@@ -62,7 +62,7 @@ erDiagram
     TOKENS {
         uuid id PK
         varchar address UK "Mint address Solana / Simbol Binance Spot"
-        varchar chain "solana / Binance_spot"
+        varchar chain "solana / binance_spot / bybit_spot"
         varchar symbol "SOL / BTC / ETH / BONK dll"
         varchar name "Nama aset / token"
         int decimals "Jumlah desimal token (misal 9 untuk SOL, 8 BTC)"
@@ -86,7 +86,7 @@ erDiagram
         numeric bid_price "Best bid price"
         numeric ask_price "Best ask price"
         numeric spread_pct "Persentase selisih bid-ask"
-        varchar source "Binance_WS / HELIUS_RPC / RAYDIUM_POOL / DEXSCREENER"
+        varchar source "BINANCE_WS / BYBIT_WS / HELIUS_RPC / RAYDIUM_POOL / DEXSCREENER"
         timestamp snapshot_time "Waktu data diambil"
         boolean is_stale "Flag kadaluarsa (> 30 detik)"
     }
@@ -193,7 +193,7 @@ erDiagram
         numeric slippage_pct "Slippage yang disimulasikan"
         numeric transaction_fee_usd "Biaya transaksi Binance/DEX simulasi"
         numeric gas_fee_native "Biaya jaringan on-chain simulasi"
-        varchar execution_venue "Binance_SPOT_SIM / SOLANA_RAYDIUM_SIM"
+        varchar execution_venue "BINANCE_SPOT_SIM / BYBIT_SPOT_SIM / SOLANA_RAYDIUM_SIM"
         timestamp executed_at
     }
 

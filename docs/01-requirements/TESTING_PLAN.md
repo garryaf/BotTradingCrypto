@@ -1,7 +1,7 @@
 # RENCANA PENGUJIAN KOMPREHENSIF (COMPREHENSIVE TESTING PLAN)
 **Dokumen:** `docs/01-requirements/TESTING_PLAN.md`  
 **Proyek:** AI Crypto Trading & Copy-Trading Platform (AUTO-TRADE-AA)  
-**Versi:** 1.0.0 (Tahap 0)  
+**Versi:** 1.1.0 (Fase 6 — Backtesting)  
 **Status:** Draf Resmi Rencana Pengujian  
 
 ---
@@ -100,3 +100,105 @@ Mengacu pada spesifikasi [LIVE_TRADING_SAFETY_GATE.md](file:///Users/nabilartana
    # Menjalankan seluruh test suite dengan laporan coverage
    pytest tests/ --cov=backend/src --cov-report=term-missing --cov-fail-under=85
    ```
+
+---
+
+## 5. Metodologi Backtesting Historis (Fase 6)
+
+### 5.1 Konteks & Batasan
+
+Sistem AUTO-TRADE-AA menggunakan AI agent Hermes (LLM) untuk menghasilkan sinyal trading di lingkungan live. Pemanggilan LLM **tidak dilakukan** pada setiap bar historis saat backtesting karena dua alasan:
+
+1. **Biaya token**: Replay 60 hari data 1 menit BTCUSDT menghasilkan ~86.400 bar. Memanggil LLM per bar akan menelan biaya token yang tidak proporsional.
+2. **Reproduksibilitas**: Respons LLM bersifat non-deterministik (sampling temperature > 0), sehingga tidak menghasilkan hasil yang dapat di-reproduce secara konsisten untuk validasi kuantitatif.
+
+**Solusi:** Engine backtest (`backend/src/backtest/engine.py`) menggunakan **strategi proxy deterministik** yang merepresentasikan **pillar Trend Following** dari Hermes. Ini cukup untuk memvalidasi kebenaran Risk Gate, Paper Broker, dan akuntansi portofolio secara end-to-end — bukan untuk mengklaim performa historis AI.
+
+### 5.2 Strategi Proxy Deterministik
+
+**Implementasi:** [`backend/src/backtest/strategy.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/backtest/strategy.py)
+
+| Parameter | Nilai | Sumber |
+|---|---|---|
+| Indikator Entry | EMA(20) > EMA(50) **dan** 50 ≤ RSI(14) ≤ 70 | `strategy.py:20-22` |
+| Stop Loss | Entry × (1 − 2%) | `SL_PCT = 0.02` |
+| Take Profit 1 (TP1) | Entry + 1.5 × Risk Unit | `TP1_R = 1.5` |
+| Take Profit 2 (TP2) | Entry + 3.0 × Risk Unit | `TP2_R = 3.0` |
+| Win Rate Prior | 55% (konservatif, bukan hasil fitting) | `estimated_winrate_pct = 55.0` |
+| Min bars warmup | 51 bar (agar EMA50 valid) | `strategy.py:18` |
+
+Strategi ini **hanya** merepresentasikan Trend Following — bukan Momentum Breakout atau Mean Reversion dari Hermes. Ini adalah *lower bound* validasi engine, bukan proyeksi performa live.
+
+### 5.3 Metodologi Walk-Forward 70/30
+
+**Implementasi:** [`backend/src/backtest/engine.py:43`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/backtest/engine.py#L43)
+
+```python
+split_idx = int(len(bars) * 0.7)  # 70% in-sample / 30% out-of-sample, chronological
+```
+
+| Segmen | Proporsi | Tujuan |
+|---|---|---|
+| **In-Sample** | 70% bar pertama (kronologis) | Observasi perilaku strategi proxy pada data training |
+| **Out-of-Sample** | 30% bar terakhir (kronologis) | Validasi tanpa look-ahead bias pada data tak terlihat |
+
+> **Penting:** Pembagian dilakukan **secara kronologis**, bukan acak. Tidak ada data masa depan yang bocor ke segmen in-sample (AC-SIM-03).
+
+### 5.4 Simulasi Fee & Slippage
+
+Backtest engine menggunakan fungsi produksi yang sama (`fee_for_venue`, `simulate_fills`) agar hasil mencerminkan kondisi nyata:
+
+| Komponen | Nilai | Referensi |
+|---|---|---|
+| Taker Fee Binance Spot | **0.10%** dari notional | `BINANCE_TAKER_FEE_PCT` di `risk/gate.py` |
+| Slippage simulasi | Dihitung dari `simulate_fills()` berbasis bid/ask | `risk/broker.py` |
+| Data stale check | **Dinonaktifkan** (`is_stale=False`) — tidak relevan untuk replay historis | `engine.py:115`, docstring modul |
+
+### 5.5 Formula Metrik Evaluasi
+
+Implementasi aktual di fungsi `_metrics()` (`engine.py:26-38`):
+
+$$\text{Profit Factor} = \frac{\sum \text{Wins}}{\sum |\text{Losses}|}$$
+
+$$\text{Win Rate} = \frac{\text{Jumlah Trade Profit}}{\text{Total Trade}} \times 100\%$$
+
+$$\text{Net PnL (USD)} = \sum_{\text{semua trade}} \text{PnL}_i$$
+
+$$\text{Max Drawdown} = \max_t \left(\frac{\text{HWM}_t - \text{Equity}_t}{\text{HWM}_t}\right) \times 100\%$$
+
+> **Catatan:** `profit_factor = inf` jika tidak ada loss sama sekali (gross_loss = 0), sesuai implementasi kode.
+
+### 5.6 Pencegahan Look-Ahead Bias (AC-SIM-03)
+
+Dari `engine.py:89`:
+```python
+signal = generate_signal(closes[:i + 1])  # AC-SIM-03: strictly no future bars
+```
+
+`generate_signal()` menerima **hanya** harga penutupan hingga bar `i` (inklusif). Bar `i+1` dan seterusnya tidak pernah diteruskan. Ini adalah implementasi pemenuhan AC-SIM-03.
+
+### 5.7 Kriteria Kelulusan Fase 6
+
+#### Kriteria Wajib (Fungsional Engine)
+Backtest engine dinyatakan **lulus fungsional** jika:
+
+| # | Kriteria | Target |
+|---|---|---|
+| F-1 | Tidak ada look-ahead bias (AC-SIM-03) | Terverifikasi dari struktur `closes[:i+1]` |
+| F-2 | Akuntansi portofolio seimbang: `final_equity = cash + mark_to_market` | Deviasi = $0.00 |
+| F-3 | Risk Gate deterministik dipatuhi (9 pintu diterapkan per sinyal) | 100% penerapan |
+| F-4 | Fee dan slippage teraplikasi pada setiap fill | Tidak ada trade gratis |
+| F-5 | Circuit breaker drawdown ≥ 8% membekukan entry baru | Diverifikasi per skenario |
+
+#### Kriteria Transisi ke Soak Test (Paper Trading Live 30 Hari)
+Sebelum Fase 7 (Paper Soak Test), backtesting **proxy** harus memenuhi:
+
+| # | Metrik | Threshold Minimum | Catatan |
+|---|---|---|---|
+| P-1 | Profit Factor (out-of-sample) | **> 0** (ekspektasi positif) | Strategi proxy **bukan** cerminan AI live. Threshold > 1.0 untuk proxy bisa tidak realistis. |
+| P-2 | Max Drawdown | **< 20%** | Jika melebihi, review parameter SL/TP proxy. |
+| P-3 | Total trade (out-of-sample) | **≥ 10** | Sampel statistik minimum untuk evaluasi bermakna. |
+| P-4 | Net Expectancy | **> 0 USD** | Pastikan fee tidak menghabiskan semua profit bruto. |
+
+> **Pemisahan penting:** Kelulusan kriteria P-1 s.d. P-4 **hanya memvalidasi engine backtest bekerja benar**, bukan memproyeksikan performa live Hermes. Validasi performa AI Hermes dilakukan melalui **Soak Test Paper Trading 30 hari** (Fase 7), bukan melalui backtesting proxy.
+
