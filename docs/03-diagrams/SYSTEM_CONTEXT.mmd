@@ -26,7 +26,8 @@ graph TB
     end
 
     subgraph EXTERNAL_SYSTEMS["Sistem & Layanan Eksternal"]
-        Binance_API["Binance Spot API<br/>(WebSocket Real-time & REST OHLCV)"]
+        Binance_API["Binance Spot API [Primary CEX]<br/>(WebSocket Real-time & REST OHLCV)"]
+        Bybit_API["Bybit Spot API [Secondary Roadmap]<br/>(Bursa Sekunder Rilis Mendatang)"]
         SOLANA_NET["Jaringan Solana RPC / Helius<br/>(Blok, Transaksi, SPL Token)"]
         MARKET_APIS["DEX Market Data APIs<br/>(DEXScreener / Birdeye / Raydium)"]
         LLM_PRIMARY["OpenRouter AI API<br/>(Claude / Llama / Gemini)"]
@@ -50,6 +51,7 @@ graph TB
     TG_BOT -->|Emergency Kill / Status| FASTAPI
 
     INGESTION <-->|WSS & REST| Binance_API
+    INGESTION -.->|Standby/Mock Adapter| Bybit_API
     INGESTION <-->|HTTPS RPC & WSS| SOLANA_NET
     INGESTION <-->|HTTPS REST| MARKET_APIS
 

@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from .agents.hermes import run_hermes_loop
 from .api.routes import router as api_router
+from .config import settings
 from .control.telegram_bot import run_telegram_bot
 from .db import engine
 from .ingestion.aggregator import run_aggregator
@@ -17,6 +18,13 @@ from .risk.engine import run_risk_engine_loop
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Enforce Layer 2 & 3 Safety Gate (Hardcoded Live Lock)
+    if settings.live_trading_enabled is not False:
+        raise RuntimeError(
+            "[SAFETY GATE] LIVE_TRADING_ENABLED is hard-locked to False on Phase 0-6. "
+            "Real capital execution is prohibited by safety policy."
+        )
+
     tasks = [
         asyncio.create_task(run_binance_ingestion()),
         asyncio.create_task(run_solana_ingestion()),
@@ -31,9 +39,11 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="AUTO-TRADE-AA Backend", lifespan=lifespan)
+
+cors_list = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=cors_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -48,4 +58,9 @@ async def health() -> dict:
         db_status = "connected"
     except Exception:
         db_status = "disconnected"
-    return {"status": "ok", "db": db_status}
+    return {
+        "status": "ok",
+        "db": db_status,
+        "env": settings.app_env,
+        "live_trading": settings.live_trading_enabled,
+    }

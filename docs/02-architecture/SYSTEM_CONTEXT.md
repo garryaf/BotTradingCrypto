@@ -44,8 +44,8 @@ Diagram konteks sistem berikut menggambarkan hubungan batas sistem platform **AU
          │                                │        │                                 │
          ▼                                ▼        ▼                                 ▼
 ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│  Solana Network  │ │   Market Data    │ │  OpenRouter API  │ │    9Route API    │
-│  (RPC / Helius)  │ │ (DEXScreener/Ray)│ │ (LLM Provider 1) │ │ (LLM Provider 2) │
+│ Binance Spot API │ │  Solana Network  │ │  OpenRouter API  │ │ Bybit Spot API   │
+│ (Primary CEX-MVP)│ │  (RPC / Helius)  │ │ (LLM Provider 1) │ │ (Secondary-Roadm)│
 └──────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘
 ```
 
@@ -64,6 +64,8 @@ Diagram konteks sistem berikut menggambarkan hubungan batas sistem platform **AU
 
 | Sistem Eksternal | Peran & Tanggung Jawab | Protokol Komunikasi | Format Data | Penanganan Kegagalan (Fallback) |
 |---|---|---|---|---|
+| **Binance Spot API (Bursa CEX Primer - Aktif MVP)** | Menyediakan stream harga real-time WebSocket (`@kline_1m`, `@trade`) dan REST API untuk instrumen likuiditas utama (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`). | HTTPS REST (`api.binance.com`), WSS (`stream.binance.com:9443`) | JSON | Reconnecting WebSocket otomatis dengan exponential backoff; fallback ke snapshot REST jika WS terputus > 5s. |
+| **Bybit Spot API (Bursa CEX Sekunder - Roadmap Rilis Mendatang)** | Bursa CEX sekunder yang dipertahankan untuk ekspansi multi-venue, cross-exchange arbitrage, dan redundansi likuiditas pada rilis mendatang. | HTTPS REST (`api.bybit.com`), WSS (`stream.bybit.com/v5/public/spot`) | JSON | Status standby/mock pada MVP; terisolasi tanpa memblokir pipeline eksekusi bursa primer. |
 | **Solana RPC / Helius** | Menyediakan stream blok, signature transaksi akun, dan penguraian instruksi program DEX. | HTTPS (JSON-RPC 2.0), WSS (WebSocket) | JSON-RPC | Beralih ke node RPC publik cadangan; jika semua gagal, hentikan ingestion (*fail-closed*). |
 | **Market Data Providers (DEXScreener / Birdeye / Raydium API)** | Menyediakan harga spot real-time, volume 24 jam, dan data kedalaman likuiditas pool DEX. | HTTPS REST API | JSON | Gunakan harga lokal dari transaksi swap on-chain terakhir jika usia data < 30 detik. |
 | **OpenRouter API** | Penyedia inferensi AI primer (Claude, Llama, Gemini) untuk analisis token dan sentimen. | HTTPS REST | JSON (OpenAI-compatible) | Timeout 15 detik; otomatis dialihkan ke 9Route. |

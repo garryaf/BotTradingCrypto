@@ -40,7 +40,7 @@ Dokumen ini mendefinisikan kontrak antarmuka teknis, skema Pydantic, matriks hak
   ```python
   class TokenSafetyInput(BaseModel):
       token_address: str
-      chain: Literal["solana", "Binance_spot"]
+      chain: Literal["solana", "binance_spot", "bybit_spot"]
       freeze_authority: Optional[str] = None
       mint_authority: Optional[str] = None
       top_10_holder_pct: float

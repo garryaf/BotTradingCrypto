@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://autotrade_app:postgres@localhost:5432/autotrade_db"
+    cors_origins: str = "http://localhost:3000"
+    live_trading_enabled: bool = False
 
     helius_api_key: str = ""
     solana_rpc_url_override: str = ""

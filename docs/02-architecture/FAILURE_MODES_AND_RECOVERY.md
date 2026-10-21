@@ -21,6 +21,9 @@ Dokumen ini mendokumentasikan skenario kegagalan potensial (*failure modes*), me
 | **FM-05** | **Terputusnya Koneksi Basis Data PostgreSQL** | Exception `OperationalError: connection refused` dari SQLAlchemy. | Seluruh operasi pembacaan dan penulisan state gagal. | FastAPI mengembalikan HTTP 503; worker ingestion berhenti sementara (*pause loop*); jangan memproses order di memori. | Docker Compose me-restart kontainer PostgreSQL otomatis (`restart: unless-stopped`); pool koneksi menyambung ulang. |
 | **FM-06** | **Gangguan Jaringan Telegram Bot API** | Panggilan webhook/polling Telegram timeout > 30s. | Notifikasi tidak terkirim dan perintah kontrol jarak jauh tertunda. | Antrekan notifikasi kritis di memori lokal (maksimal 100 pesan); operasi trading inti tetap berjalan. | Klien polling Telegram mencoba menyambung ulang secara berkala setiap 5 detik. |
 | **FM-07** | **Tekanan Memori Host (OOM Risiko MacBook M1 Pro)** | Penggunaan RAM kontainer mendekati batas limit Docker. | Kontainer berisiko dimatikan paksa oleh Docker OOM Killer. | Driver Docker membatasi pertumbuhan alokasi memori sesuai batas tabel deployment. | Skrip worker melepaskan cache historis; lakukan pembersihan data sementara (*vacuum/prune*). |
+| **FM-08** | **Pemicu Circuit Breaker Daily Loss Limit ($\ge 2.0\%$)** | Akumulasi kerugian terealisasi 24 jam mencapai atau melampaui 2.0% dari ekuitas awal hari. | Risiko kerugian beruntun intraday membahayakan portofolio. | Set `CIRCUIT_BREAKER_ACTIVE = true`; batalkan seluruh order `PENDING`; tolak entri baru; biarkan posisi terbuka dikawal SL/TP. | Jalankan investigasi pasar, evaluasi portofolio, dan eksekusi `/resume` setelah kondisi stabil (lihat SOP Lengkap). |
+| **FM-09** | **Pemicu Circuit Breaker Drawdown Limit ($\ge 8.0\%$)** | Penurunan ekuitas mark-to-market mencapai atau melampaui 8.0% dari High-Water Mark. | Penurunan modal signifikan yang mengancam integritas strategi. | **System Freeze Total**: Set `CIRCUIT_BREAKER_ACTIVE = true` dan `TRADING_PAUSED = true`; kunci Risk Gate; kirim alert darurat. | Wajib melalui Checklist 10 Poin Pra-Resume dan Otorisasi Dua Langkah (`/confirm_reset_circuit` atau API parameter `force_drawdown_reset`). |
+| **FM-10** | **Anomali Slippage Eksekusi ($> 0.50\%$) & Spread ($> 0.08\%$)** | Slippage eksekusi simulasi $> 0.50\%$ atau spread bid-ask $> 0.08\%$. | Biaya eksekusi mengikis expectancy positif sistem. | Pintu 5 Risk Gate otomatis menolak order (`SPREAD_OR_LIQUIDITY_INADEQUATE`); jika berulang 3x, pause strategi terkait. | Analisis kedalaman likuiditas pool DEX / orderbook Binance Spot; sesuaikan ambang batas atau blacklist instrumen. |
 
 ---
 
@@ -39,8 +42,17 @@ Jika sistem mengalami crash atau restart mendadak di tengah pemrosesan:
 
 ---
 
-## 3. Checklist Kesiapan Pemulihan Manual Operator
-- Jalankan perintah status melalui Telegram: `/status`.
-- Periksa log aplikasi backend melalui terminal host: `docker compose logs -f backend --tail=100`.
-- Jika kondisi darurat tidak teratasi, aktifkan perintah penghentian darurat: `/kill`.
-- Lakukan restart kontainer secara terkontrol: `docker compose restart backend`.
+## 3. SOP Operasional Circuit Breaker & Pemulihan Sistem
+
+Prosedur penanganan pemicu Circuit Breaker, verifikasi keselamatan pra-resume, alur state machine, dan runbook pemulihan manual operator didokumentasikan secara rinci pada dokumen terdedikasi:
+
+👉 **[CIRCUIT_BREAKER_OPERATIONAL_SOP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)**
+
+### Ringkasan Cepat Prosedur Pemulihan Operator:
+1. **Periksa Status Sistem:** Kirim perintah `/status` via Telegram atau panggil `GET /control/status`.
+2. **Inspeksi Log Backend:** Periksa penyebab pembekuan dengan `docker compose logs -f backend --tail=100`.
+3. **Penuhi Checklist Pra-Resume:** Pastikan tidak ada posisi menggantung, data feed stabil ($\le 5$s), dan ekuitas terekonsiliasi.
+4. **Buka Kunci Sistem (Unfreeze / Resume):**
+   - **Kasus Normal / Daily Loss:** Kirim `/resume` via Telegram atau `POST /control/resume`.
+   - **Kasus Drawdown $\ge 8.0\%$:** Wajib konfirmasi 2 langkah (`/resume` lalu ketik `/confirm_reset_circuit` dalam 60 detik).
+   - **Kasus Darurat Ekstrem:** Pemicu `/kill` untuk pembatalan seketika dalam $\le 2.0$ detik.

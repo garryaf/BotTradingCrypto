@@ -13,11 +13,16 @@ Dokumen ini memformalkan seluruh 13 keputusan arsitektur dan parameter operasion
 
 ## 1. Keputusan Desain & Baseline Arsitektur Terpilih
 
-### Q-01: Apakah Solana menjadi satu-satunya venue data pada MVP atau didukung Binance Spot?
+### Q-01: Apakah Solana menjadi satu-satunya venue data pada MVP atau didukung Binance Spot dan Bybit Spot?
 - **Status Keputusan:** **DISETUJUI (APPROVED)**
-- **Keputusan Arsitektur:** **Arsitektur Hibrida: Binance Spot API untuk instrumen likuiditas utama (BTCUSDT, ETHUSDT, SOLUSDT) + Solana On-Chain DEX (Raydium/Orca) untuk token discovery & copy-trading.**
-- **Rasional:** Menggabungkan likuiditas institusional bursa terpusat (Binance Spot WebSocket & REST) dengan peluang token desentralisasi on-chain Solana.
-- **Konsekuensi / Dampak Teknis:** Market Data Engine mendukung dua konektor data paralel: Binance API Connector (Spot) dan Solana RPC/WebSocket Ingestion.
+- **Keputusan Arsitektur:** **Arsitektur Hibrida Multi-Venue:**
+  - **Bursa Primer Aktif (Active MVP):** **Binance Spot API** untuk instrumen likuiditas utama (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`) + **Solana On-Chain DEX** (`Raydium`/`Orca`) untuk token discovery & copy-trading.
+  - **Bursa Sekunder Terencana (Secondary Roadmap):** **Bybit Spot** dipertahankan secara formal dalam arsitektur dan kamus data sebagai bursa CEX sekunder untuk rilis mendatang (multi-venue routing & cross-exchange arbitrage/hedging).
+- **Rasional:** Menggabungkan likuiditas institusional bursa terpusat primer (Binance Spot WebSocket & REST) dengan peluang token desentralisasi on-chain Solana, sembari menjaga kesiapan arsitektur (*future-proof*) untuk bursa CEX sekunder (Bybit Spot) tanpa perlu merombak skema data.
+- **Konsekuensi / Dampak Teknis:**
+  - Ingestion Engine MVP mengimplementasikan konektor aktif: Binance Spot (`https://api.binance.com`) dan Solana RPC/WebSocket (Helius).
+  - Skema data (`tokens.chain`, `paper_trades.execution_venue`) mendukung nilai bursa sekunder (`bybit_spot`, `BYBIT_SPOT_SIM`).
+  - Konfigurasi kredensial `.env.example` dan `SECRET_MANAGEMENT.md` menyediakan template `BINANCE_*` (aktif) dan `BYBIT_*` (opsional untuk rilis mendatang).
 
 ---
 

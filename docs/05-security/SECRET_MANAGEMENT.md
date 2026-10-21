@@ -32,9 +32,13 @@ Dokumen ini mendefinisikan standar ketat dalam pengelolaan kunci API, token bot,
      HELIUS_API_KEY=your_helius_api_key_here
      SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
      
-     # Binance Spot API
-     Binance_API_KEY=your_Binance_public_api_key_here
-     Binance_API_SECRET=your_Binance_secret_key_here
+     # Binance Spot API (Primary Active CEX)
+     BINANCE_API_KEY=your_binance_public_api_key_here
+     BINANCE_API_SECRET=your_binance_secret_key_here
+
+     # Bybit Spot API (Secondary CEX - Future Releases Roadmap)
+     # BYBIT_API_KEY=your_bybit_public_api_key_here
+     # BYBIT_API_SECRET=your_bybit_secret_key_here
      
      # Telegram Bot
      TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ

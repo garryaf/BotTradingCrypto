@@ -78,8 +78,8 @@ Prinsip fundamental sistem adalah: **AI memberikan analisis dan usulan sinyal, n
    Redis bukan prasyarat wajib untuk MVP. Polling in-memory dan database PostgreSQL sudah memadai untuk beban kerja single-operator pada MacBook M1 Pro. Redis hanya diintegrasikan jika ada kebutuhan terukur untuk antrean background terdistribusi atau rate-limiting kecepatan tinggi.
 4. **Simulasi Tanpa Risiko / Paper Trading First (ADR-004):**
    Sistem dirancang secara mendasar untuk *paper trading* dan *backtesting*. Tidak ada fungsionalitas penandatanganan transaksi dengan kunci privat (*private key*) nyata pada fase ini.
-5. **Solana & Binance Hybrid Data Engine (ADR-005):**
-   Spesifikasi ingestion dan model data dioptimalkan untuk instrumen likuiditas utama Binance Spot dan karakteristik on-chain Solana (SPL Token, Account Model, DEX AMM Raydium/Orca).
+5. **Multi-Venue Architecture: Binance Spot (Primary) + Bybit Spot (Secondary Roadmap) + Solana DEX (ADR-005):**
+   Spesifikasi ingestion dan model data dioptimalkan untuk instrumen likuiditas utama **Binance Spot** (CEX primer aktif pada MVP) dan karakteristik on-chain **Solana** (SPL Token, Account Model, DEX AMM Raydium/Orca). **Bybit Spot** secara formal dipertahankan dalam desain arsitektur sebagai bursa sekunder untuk rilis mendatang guna mendukung multi-venue arbitrage, routing terdistribusi, dan diversifikasi eksekusi.
 6. **Arsitektur Hibrida Python + Rust + React.js (ADR-006):**
    - **Frontend:** **React.js** melalui framework **Next.js 15 (TypeScript + Tailwind CSS)** untuk antarmuka visual responsif, grafik candlestick interaktif, dan status portofolio.
    - **AI Orchestration & API Layer (Python FastAPI):** Menjalankan Hermes Multi-Agent, Dynamic AI Skill System (`.agents/skills/`), adapter AI Model Gateway (OpenRouter, 9Route), serta antarmuka REST API dan Telegram bot.
