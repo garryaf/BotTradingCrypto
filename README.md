@@ -39,7 +39,7 @@ Detail rincian milestone: [docs/00-overview/ROADMAP.md](file:///Users/nabilartan
 
 ### Teknologi
 - **Backend API & Orchestration:** Python 3.12, FastAPI, SQLModel (ORM), Alembic, AsyncPG, Pydantic v2.
-- **Trading Engine:** Rust (komponen performa tinggi, IPC via HTTP lokal ke FastAPI).
+- **Risk Gate Engine (opsional):** Rust, dipanggil backend via HTTP JSON `POST /evaluate` (fail-closed). Default nonaktif (`ENGINE_URL` kosong) — Risk Gate 9 pintu berjalan in-process di Python. Kode `engine/src` belum ada (lihat [RUST_ENGINE_INTEGRATION_SPEC.md](docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md)).
 - **AI Gateway:** OpenRouter (primer) + 9Route (fallback fail-over), Pydantic structured output.
 - **Database:** PostgreSQL 16 (Alpine Linux).
 - **Frontend Dashboard:** Next.js 15 (App Router), React 19, Tailwind CSS v4, Framer Motion, Lightweight Charts.
@@ -53,7 +53,7 @@ Detail rincian milestone: [docs/00-overview/ROADMAP.md](file:///Users/nabilartan
 | **FastAPI Backend** | `8000` | HTTP / WS | `http://localhost:8000/api/v1/health` |
 | **PostgreSQL DB** | `5432` | TCP / SQL | `postgresql://autotrade_app:***@localhost:5432/autotrade_db` |
 | **Frontend Web** | `3000` | HTTP | `http://localhost:3000` (Dashboard Utama) |
-| **Rust Engine (IPC)** | `50051` / Internal | TCP | Engine mikro-latensi internal |
+| **Rust Risk Gate Engine** *(opt-in)* | `8080` / internal saja | HTTP JSON | `http://engine:8080/evaluate` — hanya di jaringan Docker, tidak di-publish ke host. Aktif via `--profile engine` + `ENGINE_URL`. |
 
 ---
 
@@ -69,13 +69,13 @@ AUTO-TRADE-AA/
 │   │   ├── control/         # Telegram bot (long-polling, allowlist, /kill switch)
 │   │   ├── gateway/         # AI Model Gateway (OpenRouter + 9Route fallback)
 │   │   ├── ingestion/       # Binance Spot & Solana RPC ingestion pipelines
-│   │   ├── risk/            # Risk Gate (9 pintu), broker simulator, balance ledger
+│   │   ├── risk/            # Risk Gate (9 pintu), broker simulator, ledger, engine_client (IPC ke Rust)
 │   │   ├── models.py        # SQLModel ORM (21 entitas tabel terelasi)
 │   │   ├── config.py        # Pydantic Settings (manajemen konfigurasi terpusat)
 │   │   └── main.py          # FastAPI application entry point
 │   ├── alembic/             # Database migrations (alembic.ini + versions/)
 │   └── Dockerfile           # Docker container backend
-├── engine/                  # Rust Trading Engine (IPC via HTTP)
+├── engine/                  # Rust Risk Gate engine (opt-in, Dockerfile siap; engine/src belum ada)
 ├── frontend/
 │   ├── src/
 │   │   ├── app/             # Next.js App Router (Dashboard, History, Settings)
@@ -163,6 +163,13 @@ docker compose up -d --build
 > cd frontend && npm install && npm run dev
 > ```
 
+> 🦀 **Opsional — Rust Risk Gate Engine:** service `engine` hanya jalan bila diminta eksplisit.
+> Aktifkan **hanya setelah `engine/src` tersedia**, karena backend akan menolak *semua* sinyal (fail-closed) jika engine tidak bisa dihubungi:
+> ```bash
+> # di .env: ENGINE_URL=http://engine:8080
+> docker compose --profile engine up -d --build
+> ```
+
 Sistem akan otomatis:
 1. Menyalakan PostgreSQL dan menunggu inisialisasi sampai status *healthy*.
 2. Menjalankan migrasi database via Alembic (`alembic upgrade head`) untuk membuat 21 tabel.
@@ -192,9 +199,14 @@ Dashboard interaktif akan langsung menampilkan portofolio virtual, status maskot
 ### Step 5: Eksekusi Test Suite & Backtest
 Pastikan semua komponen lulus validasi unit & integrasi:
 
+Test berupa self-check plain-assert (tanpa pytest, tanpa DB, tanpa API key asli):
 ```bash
-# 1. Jalankan unit test dengan coverage minimal 85%
-docker compose exec backend pytest tests/ --cov=src --cov-report=term-missing
+# 1. Self-check unit (masing-masing mencetak "ok" bila lulus)
+docker compose exec backend python -m src.risk.test_gate            # 9 pintu Risk Gate
+docker compose exec backend python -m src.risk.test_broker          # Paper Broker & akuntansi
+docker compose exec backend python -m src.risk.test_engine_client   # IPC Rust engine fail-closed
+docker compose exec backend python -m src.agents.test_hermes        # AI Gateway fallback & skema
+docker compose exec backend python -m src.backtest.test_backtest    # anti look-ahead bias
 
 # 2. Jalankan engine backtesting simulasi data historis BTCUSDT
 docker compose exec backend python -m src.backtest.engine
@@ -360,6 +372,8 @@ docker compose -f docker-compose.prod.yml ps
 ```
 Semua container (`postgres`, `backend`, `frontend`) harus berstatus `Up (healthy)` atau `Up`.
 
+Rust Risk Gate engine bersifat opt-in di produksi juga: tambahkan `ENGINE_URL=http://engine:8080` ke `.env` lalu jalankan dengan `docker compose -f docker-compose.prod.yml --profile engine up -d --build`. Jangan aktifkan sebelum `engine/src` ada — backend fail-closed dan membekukan trading jika engine tak terjangkau.
+
 ---
 
 ### Step 6: Konfigurasi Nginx Reverse Proxy & SSL (HTTPS)
@@ -490,6 +504,7 @@ SOP Circuit Breaker: [`docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md`](fil
 | Port `5432` atau `8000` sudah digunakan | Ada service PostgreSQL atau Python lokal yang sedang jalan di host | Matikan service host: `sudo systemctl stop postgresql` atau ubah port host pada `docker-compose.yml`. |
 | Telegram Bot tidak membalas pesan | `TELEGRAM_ALLOWED_USER_ID` salah atau bot token tidak valid | Dapatkan User ID numerik Anda via `@userinfobot`, update di `.env`, lalu restart backend: `docker compose restart backend`. |
 | Nginx 502 Bad Gateway | Container backend/frontend down atau port internal tidak cocok | Periksa apakah container aktif via `docker compose ps`, dan pastikan proxy pass mengarah ke `127.0.0.1:8000` dan `127.0.0.1:3000`. |
+| Semua sinyal `REJECTED` dengan alasan `ENGINE_TIMEOUT` / `ENGINE_UNAVAILABLE` / `ENGINE_ERROR` / `ENGINE_INVALID_RESPONSE`, circuit breaker aktif | `ENGINE_URL` diisi tapi Rust engine tidak jalan, lambat (> `ENGINE_TIMEOUT_MS`), atau membalas di luar kontrak | Kosongkan `ENGINE_URL` untuk kembali ke Risk Gate Python saja, atau jalankan engine (`--profile engine`). Lalu `/resume` untuk melepas circuit breaker. |
 | Error CORS saat panggil API dari frontend | Domain frontend belum diizinkan di backend CORS | Pastikan `NEXT_PUBLIC_API_URL` sesuai dengan URL domain yang digunakan. |
 
 ---

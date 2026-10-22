@@ -40,7 +40,7 @@ Dokumen ini menguraikan struktur dekomposisi komponen internal platform **AUTO-T
                                                           │
                                                           ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 4. DOMAIN & TRADING ENGINE LAYER (High-Performance Engine in Rust)          │
+│ 4. DOMAIN & TRADING ENGINE LAYER (target Rust; kini Python, ADR-006)        │
 │    ├── Deterministic Risk Gate (Sub-ms Rule Engine: 0.5% Risk, 2% Loss, 8% DD│
 │    ├── Strategy Engine & Versioning (Trend Following, Breakout, Mean Reversion
 │    ├── Paper Broker Matching (Slippage Model, Binance Fee, Partial Fill Sim)  │
@@ -49,7 +49,7 @@ Dokumen ini menguraikan struktur dekomposisi komponen internal platform **AUTO-T
                                        │ Persistensi State & Transaksi
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 5. INGESTION & DATA LAYER (High-Throughput in Rust)                         │
+│ 5. INGESTION & DATA LAYER (target Rust; kini Python, ADR-006)               │
 │    ├── Binance Spot WebSocket & REST Connector                                │
 │    ├── Solana RPC / Geyser WebSocket Client                                 │
 │    ├── Swap Instruction Parser (Raydium / Orca / Jupiter)                   │

@@ -27,6 +27,14 @@ services:
       postgres:
         condition: service_healthy
 
+  # Rust Risk Gate (RUST_ENGINE_INTEGRATION_SPEC.md §6.2). Opt-in until engine/src exists:
+  #   docker compose --profile engine up   +   ENGINE_URL=http://engine:8080 in .env
+  engine:
+    profiles: ["engine"]
+    build: ./engine
+    expose:
+      - "8080"  # internal Docker network only, never published to the host
+
   frontend:
     build:
       context: ./frontend

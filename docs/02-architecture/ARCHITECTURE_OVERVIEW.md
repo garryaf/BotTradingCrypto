@@ -84,6 +84,7 @@ Prinsip fundamental sistem adalah: **AI memberikan analisis dan usulan sinyal, n
    - **Frontend:** **React.js** melalui framework **Next.js 15 (TypeScript + Tailwind CSS)** untuk antarmuka visual responsif, grafik candlestick interaktif, dan status portofolio.
    - **AI Orchestration & API Layer (Python FastAPI):** Menjalankan Hermes Multi-Agent, Dynamic AI Skill System (`.agents/skills/`), adapter AI Model Gateway (OpenRouter, 9Route), serta antarmuka REST API dan Telegram bot.
    - **High-Speed Trading & Safety Engine (Rust):** Menjalankan WebSocket ingestion berkecepatan tinggi, decoding transaksi on-chain Solana, Deterministic Risk Gate sub-milidetik, dan matching engine Paper Broker bebas jeda garbage collection.
+     *Status: target arsitektur. Saat ini semua komponen ini berjalan di Python (`backend/src/`). Client IPC fail-closed ke Rust Risk Gate sudah ada (`backend/src/risk/engine_client.py`, opt-in via `ENGINE_URL`); kode `engine/src` belum ada.*
 
 ---
 

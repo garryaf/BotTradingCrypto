@@ -31,7 +31,12 @@ Kami memutuskan untuk mengadopsi **Arsitektur Hibrida**:
    - **Ingestion & Parser Service:** Konektor WebSocket Binance Spot dan parser instruksi transaksi on-chain Solana menggunakan `solana-sdk` native.
    - **Deterministic Risk Engine:** Evaluasi 9 pintu risiko (Risk 0.5%, Daily Loss 2%, Drawdown 8%, Expectancy Positif) dalam sub-milidetik.
    - **Paper Broker Matching Engine:** Simulasi pencocokan order, model slippage matematis, dan akuntansi portofolio berkecepatan memori (*in-memory ledger*).
-4. **Mekanisme Interoperabilitas:** Komunikasi antara Python dan Rust dapat dilakukan melalui **FFI (PyO3)** untuk integrasi in-process monolitik berkinerja tinggi, atau melalui **gRPC / IPC lokal** berlatensi ultra-rendah.
+4. **Mekanisme Interoperabilitas:** Untuk MVP dipilih **HTTP/1.1 JSON** di jaringan Docker internal (`POST http://engine:8080/evaluate`). FFI (PyO3) dan gRPC ditunda — detail di [RUST_ENGINE_INTEGRATION_SPEC.md](../RUST_ENGINE_INTEGRATION_SPEC.md).
+
+### Status Implementasi (21 Oktober 2026)
+- **Sudah ada:** client Python fail-closed `backend/src/risk/engine_client.py`, env `ENGINE_URL`/`ENGINE_TIMEOUT_MS`, service `engine` di kedua compose file (profile `engine`, opt-in), `engine/Dockerfile` multi-stage.
+- **Belum ada:** kode Rust (`engine/src`). Ingestion, Risk Gate 9 pintu, dan Paper Broker saat ini **berjalan di Python** (`backend/src/ingestion/`, `backend/src/risk/`). Bagian 3 di atas adalah target arsitektur, bukan kondisi kode saat ini.
+- **Mode default:** `ENGINE_URL` kosong → hanya Risk Gate Python. Bila diisi, verdict engine **di-AND** dengan verdict Python (sizing tetap di Python).
 
 ---
 

@@ -70,10 +70,11 @@ putuskan nasib Rust engine (mahal, arsitektural).
       `POST /evaluate` sesuai kontrak `SignalCandidate`/`RiskEvaluationResult` (spec §4).
 - [ ] **PH1-T2b:** Port 9 pintu Risk Gate ke Rust, paritaskan hasil dengan `risk/gate.py`
       (test lintas-bahasa: input sama → verdict sama).
-- [ ] **PH1-T3b:** Implementasi `call_risk_engine()` di Python (httpx, timeout 10ms,
-      **fail-closed** persis spec §5) + env `ENGINE_URL`/`ENGINE_TIMEOUT_MS` di `config.py`.
-- [ ] **PH1-T4b:** Tambahkan service `engine` ke `docker-compose.yml` (spec §6.2), depends_on
-      postgres healthy.
+- [x] **PH1-T3b (G2):** `call_risk_engine()` di `backend/src/risk/engine_client.py` (httpx, timeout
+      `ENGINE_TIMEOUT_MS`, **fail-closed** spec §5) + `engine_url`/`engine_timeout_ms` di `config.py`.
+      Opt-in: `ENGINE_URL` kosong = perilaku lama (Python gate saja). Test: `test_engine_client.py`.
+- [x] **PH1-T4b (G2):** Service `engine` di kedua compose file, profile `engine` (opt-in sampai
+      `engine/src` ada). Tanpa `depends_on` postgres: Risk Gate engine stateless, tak menyentuh DB.
 
 **Umum (kedua jalur):**
 - [ ] **PH1-T4:** Perbaiki klaim palsu di `DOCUMENTATION_TASK_BACKLOG.md:159` (292ns "terbukti"

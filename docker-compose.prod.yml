@@ -34,6 +34,16 @@ services:
     networks:
       - internal_net
 
+  # Rust Risk Gate — opt-in via `--profile engine` + ENGINE_URL=http://engine:8080 (RUST_ENGINE_INTEGRATION_SPEC.md §6.2).
+  engine:
+    profiles: ["engine"]
+    build: ./engine
+    restart: always
+    expose:
+      - "8080"
+    networks:
+      - internal_net
+
   frontend:
     build:
       context: ./frontend
