@@ -67,7 +67,7 @@ shortcut: HTTP JSON IPC, bukan Unix socket/gRPC; upgrade ke Unix socket jika lat
 [postgres:5432] <── (kedua service menulis langsung)
 ```
 
-> **Catatan:** Rust engine service belum ditambahkan ke `docker-compose.yml` per status Fase 2. Lihat Seksi 6.
+> **Catatan:** Service `engine` sudah ada di kedua compose file sebagai profile opt-in (`--profile engine`). Lihat Seksi 6.
 
 ### 3.2 Endpoint Risk Gate
 
@@ -169,28 +169,14 @@ Payload dikirim dari Python FastAPI ke Rust engine untuk evaluasi:
 
 | Kondisi | Perilaku Python |
 |---|---|
-| HTTP timeout > **10ms** | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_TIMEOUT"]`. |
-| HTTP error 5xx dari engine | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_ERROR"]`. |
-| Engine container tidak tersedia (`ConnectionRefused`) | Tolak sinyal. Set circuit breaker `FROZEN`. Kirim notifikasi Telegram `CRITICAL`. |
+| HTTP timeout > `ENGINE_TIMEOUT_MS` (10ms) | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_TIMEOUT"]`. |
+| HTTP error (4xx/5xx) dari engine | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_ERROR"]`. |
+| Engine container tidak tersedia (`ConnectionRefused`) | Tolak sinyal (`ENGINE_UNAVAILABLE`). Set `CIRCUIT_BREAKER_ACTIVE = true` + `SystemEvent CRITICAL`. *(Notifikasi Telegram otomatis belum tersambung — gap FR-TG-01.)* |
 | Response JSON tidak valid / skema salah | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_INVALID_RESPONSE"]`. |
-| `passed == false` dari engine | Tolak sinyal. Simpan `rejection_reasons` ke tabel `risk_checks`. |
+| `signal_id` balasan ≠ request, atau `passed == true` tapi `gates` kosong / ada gate `false` | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_INVALID_RESPONSE"]` (verdict tidak konsisten = tidak dipercaya). |
+| `passed == false` dari engine | Tolak sinyal. `rejection_reasons` dari engine disimpan ke `risk_checks` (fallback `ENGINE_REJECTED` jika kosong). |
 
-**Kode Python pseudocode (referensi implementasi):**
-
-```python
-# shortcut: timeout 10ms hardcoded, jadikan konfigurasi via user_settings jika perlu tuning
-async def call_risk_engine(candidate: SignalCandidate) -> RiskEvaluationResult:
-    try:
-        resp = await httpx.post(
-            f"{settings.ENGINE_URL}/evaluate",
-            json=candidate.model_dump(),
-            timeout=0.010,  # 10ms
-        )
-        resp.raise_for_status()
-        return RiskEvaluationResult.model_validate(resp.json())
-    except Exception:
-        return RiskEvaluationResult(passed=False, rejection_reasons=["ENGINE_TIMEOUT"])
-```
+**Implementasi aktual:** `backend/src/risk/engine_client.py` → `call_risk_engine(candidate, client) -> (passed, rejection_reasons)`. Tidak pernah melempar exception. Dipanggil dari `_process_signal` di `backend/src/risk/engine.py` **hanya jika `ENGINE_URL` diisi**. Payload dibangun oleh `_signal_candidate()` dari data DB nyata (`trading_signals`, `market_snapshots`, `portfolio_snapshots`) — tidak ada data mock di runtime. Loop memakai satu `httpx.AsyncClient` bersama agar budget 10ms tidak habis untuk TCP handshake.
 
 ---
 
@@ -200,30 +186,26 @@ async def call_risk_engine(candidate: SignalCandidate) -> RiskEvaluationResult:
 
 | Variabel | Default | Deskripsi |
 |---|---|---|
-| `ENGINE_URL` | `http://engine:8080` | Base URL Rust engine di Docker network. |
+| `ENGINE_URL` | *(kosong)* | Base URL Rust engine. Kosong = engine nonaktif, hanya Risk Gate Python. Isi `http://engine:8080` untuk mengaktifkan. |
 | `ENGINE_TIMEOUT_MS` | `10` | Timeout request IPC dalam milidetik. |
-| `MAX_OPEN_POSITIONS` | `3` | Batas maksimal posisi terbuka (Gate 8b). |
 
-### 6.2 Penambahan `docker-compose.yml` (Belum Diimplementasikan)
+`MAX_OPEN_POSITIONS` **bukan** env var: konstanta `5` di `backend/src/risk/gate.py` (Gate 8). Engine Rust wajib memakai nilai yang sama.
 
-Rust engine service perlu ditambahkan ke `docker-compose.yml`:
+### 6.2 Service di `docker-compose.yml` / `docker-compose.prod.yml` (Sudah Diimplementasikan)
 
 ```yaml
-# Tambahkan ke docker-compose.yml saat engine siap dideploy:
   engine:
-    build:
-      context: ./engine
-      dockerfile: Dockerfile  # multi-stage: cargo build --release
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-    ports:
-      - "8080:8080"  # hanya expose ke internal network, bukan host
-    depends_on:
-      postgres:
-        condition: service_healthy
+    profiles: ["engine"]   # opt-in: docker compose --profile engine up
+    build: ./engine        # engine/Dockerfile multi-stage, cargo build --release --locked
+    expose:
+      - "8080"             # internal Docker network saja, tidak di-publish ke host
 ```
 
-> **Status:** Engine service belum ada di `docker-compose.yml` (hanya `postgres` dan `backend`). Ditambahkan saat Fase 3 engine Rust aktif di-deploy.
+Tanpa `depends_on` postgres dan tanpa `DATABASE_URL`: Risk Gate engine stateless, semua input datang di payload `SignalCandidate`.
+
+> **Status (G2 selesai):** Service `engine` sudah ada di `docker-compose.yml` dan `docker-compose.prod.yml` di bawah profile `engine` (opt-in, `expose` internal saja, tanpa port host). Client Python ada di `backend/src/risk/engine_client.py` (`call_risk_engine`), dipanggil dari `risk/engine.py::_process_signal` hanya jika `ENGINE_URL` diisi. Verdict engine di-AND dengan Risk Gate Python; sizing tetap di Python. Self-check: `python -m src.risk.test_engine_client`.
+>
+> **Catatan kontrak:** Python tidak mengirim `portfolio.net_expectancy_usd` (expectancy dihitung dalam satuan R di Gate 1, bukan USD). Engine Rust wajib memperlakukan field itu opsional atau menghitungnya sendiri.
 
 ---
 
@@ -243,5 +225,6 @@ Log `evaluation_ns` dicatat ke tabel `risk_checks` (kolom `evaluated_at` sudah a
 
 - **FFI (PyO3)**: Opsi integrasi in-process PyO3 dilewati untuk MVP karena menambah kompleksitas build. Upgrade jika HTTP IPC menunjukkan latensi > 5ms konsisten.
 - **gRPC**: Dilewati karena membutuhkan protobuf toolchain tambahan. Pertimbangkan jika jumlah sinyal per detik > 100.
-- **Cargo.toml / src/**: Belum ada kode Rust di `engine/` selain `Cargo.lock`. Spesifikasi ini mendokumentasikan kontrak yang harus diimplementasikan.
-- **Risiko**: Tanpa engine aktif, `docker-compose.yml` belum menyertakan service `engine`. Semua request akan timeout dan fail-closed sampai engine di-deploy.
+- **`engine/src/`**: Belum ada kode Rust. `engine/Dockerfile` dan `engine/Cargo.toml` disiapkan, tapi crate belum bisa di-build sampai `src/main.rs` (endpoint `POST /evaluate`) ditulis (gap G1).
+- **Risiko**: Jangan isi `ENGINE_URL` sebelum engine jalan — backend fail-closed, **semua** sinyal ditolak dan circuit breaker aktif (`ENGINE_UNAVAILABLE`). Default `ENGINE_URL` kosong menjaga perilaku lama (Risk Gate Python saja).
+- **Latensi**: target ≤ 10ms end-to-end belum terukur; hanya bisa diukur setelah engine Rust ada.

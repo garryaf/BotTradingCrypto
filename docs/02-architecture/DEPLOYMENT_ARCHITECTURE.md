@@ -58,6 +58,7 @@ Untuk mencegah kontainer menghabiskan kapasitas RAM 16 GB pada host laptop, bata
 | **`backend`** | `python:3.11-slim` (ARM64) | 2.5 GB | 1.0 GB | 4.0 Cores | Menjalankan API FastAPI, Ingestion, Hermes, dan Risk Engine. |
 | **`frontend`** | `node:20-alpine` (ARM64) | 1.5 GB | 512 MB | 2.0 Cores | Menjalankan Next.js web dashboard. |
 | **`redis`** *(Opsional)* | `redis:7-alpine` | 512 MB | 128 MB | 1.0 Core | Hanya diaktifkan bila antrean latar belakang memerlukan Redis. |
+| **`engine`** *(Opsional)* | `rust:1.97-slim-trixie` → `debian:trixie-slim` | — | — | — | Rust Risk Gate, profile `engine` (opt-in). Belum diberi resource limit: tetapkan setelah `engine/src` ada dan diukur. |
 | **Total Maksimal** | — | **6.5 GB** | **2.15 GB** | — | Aman di bawah batas 8.0 GB (NFR-PERF-01). |
 
 ---
@@ -68,6 +69,7 @@ Untuk mencegah kontainer menghabiskan kapasitas RAM 16 GB pada host laptop, bata
 - **Eksposur Port ke Host:**
   - `localhost:3000` -> Web Dashboard (Next.js)
   - `localhost:8000` -> Backend REST API & OpenAPI Docs (`/docs`)
+  - `engine:8080` -> **tidak di-publish ke host** (`expose` saja). Hanya backend yang memanggilnya via `ENGINE_URL=http://engine:8080`. Aktif hanya dengan `docker compose --profile engine up`.
   - `localhost:5432` -> PostgreSQL (Hanya dibatasi akses dari localhost untuk audit manual/DBeaver)
 
 ---

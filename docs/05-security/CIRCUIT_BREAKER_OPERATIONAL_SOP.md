@@ -77,6 +77,15 @@ Sistem mengawasi 4 layer pemicu keselamatan secara kontinu pada setiap siklus ev
 
 ---
 
+### 2.5 Pemicu Tambahan: Rust Risk Gate Engine Tak Terjangkau (hanya bila `ENGINE_URL` diisi)
+- **Kondisi Pemicu:** `call_risk_engine()` mendapat koneksi ditolak (`ENGINE_UNAVAILABLE`).
+- **Deteksi:** `backend/src/risk/engine_client.py`, dipanggil dari `_process_signal` di `backend/src/risk/engine.py`.
+- **Dampak Otomatis:** sinyal ditolak, `CIRCUIT_BREAKER_ACTIVE = true`, `SystemEvent` `CIRCUIT_BREAKER_TRIGGERED` severity `CRITICAL`. Timeout / HTTP error / balasan invalid juga menolak sinyal, tapi **tidak** memicu freeze.
+- **Pemulihan:** hidupkan engine atau kosongkan `ENGINE_URL`, verifikasi, lalu `/resume`.
+- **Catatan:** notifikasi Telegram otomatis untuk `SystemEvent` belum tersambung (gap FR-TG-01) — pantau dashboard/log.
+
+---
+
 ## 3. Diagram State Machine & Transisi Siklus Hidup Sistem
 
 Siklus hidup operasional platform diatur melalui *Finite State Machine (FSM)* deterministik yang tercermin pada flag `user_settings` dan audit log `system_events`:
@@ -226,7 +235,7 @@ Setiap kali Circuit Breaker Layer 1 atau Layer 2 terpicu, operator wajib mengisi
 ```markdown
 # INCIDENT POST-MORTEM REPORT
 - Tanggal & Waktu Kejadian: [YYYY-MM-DD HH:MM:SS UTC]
-- Pemicu Circuit Breaker: [Daily Loss >= 2% / Drawdown >= 8% / Stale Data / Slippage Anomaly]
+- Pemicu Circuit Breaker: [Daily Loss >= 2% / Drawdown >= 8% / Stale Data / Slippage Anomaly / Rust Engine Unavailable]
 - Nilai Metrik Saat Kejadian: 
   * Total Equity: $... USD
   * Drawdown Pct: ...%

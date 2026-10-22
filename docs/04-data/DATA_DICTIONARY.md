@@ -196,7 +196,7 @@ Mencatat hasil evaluasi 9 pintu keselamatan deterministik sebelum eksekusi diizi
 | `circuit_breaker_check` | `BOOLEAN` | **NO** | — | Pintu 8a: Status sistem bukan dalam Circuit Breaker/Freeze. | `TRUE` |
 | `max_positions_check` | `BOOLEAN` | **NO** | `TRUE` | Pintu 8b: Jumlah posisi terbuka < batas `MAX_OPEN_POSITIONS`. Ditambahkan via migrasi `003_risk_checks_max_positions`. | `TRUE` |
 | `data_freshness_check` | `BOOLEAN` | **NO** | — | Pintu 9: Usia data harga pasar $< 30$ detik. | `TRUE` |
-| `rejection_reasons` | `JSONB` | YES | `'[]'::jsonb` | Daftar array aturan yang gagal jika `passed == FALSE`. | `[]` / `["DAILY_LOSS_EXCEEDED"]` |
+| `rejection_reasons` | `JSONB` | YES | `'[]'::jsonb` | Daftar array aturan yang gagal jika `passed == FALSE`. Kode dari Risk Gate Python (`gate.py`), plus kode IPC Rust engine bila `ENGINE_URL` diisi: `ENGINE_TIMEOUT`, `ENGINE_UNAVAILABLE`, `ENGINE_ERROR`, `ENGINE_INVALID_RESPONSE`, `ENGINE_REJECTED`, atau kode yang dikirim engine. Kolom gate boolean tetap mencerminkan evaluasi Python. | `[]` / `["DAILY_LOSS_LIMIT_EXCEEDED"]` / `["ENGINE_TIMEOUT"]` |
 | `evaluated_at` | `TIMESTAMPTZ` | **NO** | `CURRENT_TIMESTAMP` | Waktu evaluasi aturan dieksekusi (latensi < 20ms). | `2026-10-14 14:32:02.015+07` |
 
 ---

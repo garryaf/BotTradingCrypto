@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     max_drawdown_limit_pct: Decimal = Decimal("0.08")
     max_spread_pct: Decimal = Decimal("0.0008")
 
+    # Rust Risk Gate (RUST_ENGINE_INTEGRATION_SPEC.md §6.1). Empty = in-process Python gate only.
+    engine_url: str = ""
+    engine_timeout_ms: int = 10
+
     telegram_bot_token: str = ""
     telegram_allowed_user_id: str = ""
     telegram_allowed_chat_id: str = ""

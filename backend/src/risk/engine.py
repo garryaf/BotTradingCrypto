@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+import httpx
 from sqlmodel import select
 
 from ..config import settings
@@ -43,6 +44,7 @@ from ..models import (
     UserSetting,
 )
 from .broker import fee_for_venue, simulate_fills
+from .engine_client import call_risk_engine
 from .gate import BINANCE_TAKER_FEE_PCT, evaluate_risk
 from .ledger import next_snapshot
 
@@ -175,7 +177,43 @@ async def _write_snapshot(
         await _set_account_circuit_breaker(session, user_id, True, f"Drawdown {fields['current_drawdown_pct']:.2f}% >= limit")
 
 
-async def _process_signal(session, signal: TradingSignal, user_id: UUID) -> None:
+def _signal_candidate(signal: TradingSignal, market: MarketSnapshot, portfolio: PortfolioSnapshot,
+                      open_positions: int, outcome) -> dict:
+    """SignalCandidate payload — RUST_ENGINE_INTEGRATION_SPEC.md §4.1."""
+    # shortcut: Decimal -> float for the JSON contract, fine for a pass/fail verdict; switch to strings if the engine ever returns money.
+    return {
+        "signal_id": str(signal.id),
+        "symbol": signal.symbol,
+        "action": signal.action,
+        "target_entry_price": float(signal.target_entry_price),
+        "suggested_stop_loss": float(signal.suggested_stop_loss),
+        "suggested_take_profit_1": float(signal.suggested_take_profit_1),
+        "suggested_take_profit_2": float(signal.suggested_take_profit_2),
+        "recommended_allocation_pct": float(outcome.risk_pct_used),
+        "confidence_score": float(signal.confidence_score),
+        "snapshot": {
+            "price_usd": float(market.price_usd),
+            "bid_price": float(market.bid_price or market.price_usd),
+            "ask_price": float(market.ask_price or market.price_usd),
+            "spread_pct": float(market.spread_pct or 0),
+            "snapshot_age_seconds": int((datetime.now(timezone.utc) - market.snapshot_time).total_seconds()),
+            "pool_liquidity_usd": float(market.volume_24h_usd or 0),
+        },
+        "portfolio": {
+            "total_equity_usd": float(portfolio.total_equity_usd),
+            "cash_balance_usd": float(portfolio.cash_balance_usd),
+            "daily_realized_pnl_usd": float(portfolio.daily_realized_pnl_usd),
+            "daily_loss_pct": float(portfolio.daily_loss_pct),
+            "high_water_mark_usd": float(portfolio.high_water_mark_usd),
+            "current_drawdown_pct": float(portfolio.current_drawdown_pct),
+            "open_positions_count": open_positions,
+        },
+    }
+
+
+async def _process_signal(
+    session, signal: TradingSignal, user_id: UUID, client: httpx.AsyncClient | None = None
+) -> None:
     """Evaluate + (maybe) execute one shared signal against one account's own numbers.
     Never mutates signal.status — the caller owns that once it's offered to every account."""
     token = await session.get(Token, signal.token_id)
@@ -212,6 +250,19 @@ async def _process_signal(session, signal: TradingSignal, user_id: UUID) -> None
         circuit_breaker_active=circuit_breaker_active,
         min_lot_size=token.min_lot_size,
     )
+
+    # Engine verdict is ANDed with the local one: sizing stays in Python (the IPC contract returns no sizing).
+    if settings.engine_url:
+        engine_passed, engine_reasons = await call_risk_engine(
+            _signal_candidate(signal, market, portfolio, open_positions, outcome), client
+        )
+        if not engine_passed:
+            outcome.passed = False
+            outcome.rejection_reasons += engine_reasons
+        if "ENGINE_UNAVAILABLE" in engine_reasons:
+            await _set_account_circuit_breaker(
+                session, user_id, True, "Rust Risk Gate engine unreachable — trading frozen (fail-closed)"
+            )
 
     risk_check = RiskCheck(
         user_id=user_id,
@@ -378,25 +429,29 @@ async def _monitor_positions(session) -> None:
 
 
 async def run_risk_engine_loop() -> None:
-    while True:
-        async with async_session_factory() as session:
-            await _expire_stale_signals(session)
-            if not await is_paused(session):
-                user_ids = (await session.exec(select(BinanceCredential.user_id))).all()
-                pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
-                for signal in pending:
-                    for user_id in user_ids:
-                        if await is_account_paused(session, user_id):
-                            continue
-                        try:
-                            await _process_signal(session, signal, user_id)
-                        except Exception:
-                            logger.exception("risk engine failed processing signal %s for user %s", signal.id, user_id)
-                    if user_ids:
-                        signal.status = "DISPATCHED"
-                        await session.commit()
-            try:
-                await _monitor_positions(session)
-            except Exception:
-                logger.exception("risk engine failed monitoring positions")
-        await asyncio.sleep(CYCLE_INTERVAL_SEC)
+    # One pooled client so the 10ms engine budget isn't spent on a fresh TCP handshake per signal.
+    async with httpx.AsyncClient() as client:
+        while True:
+            async with async_session_factory() as session:
+                await _expire_stale_signals(session)
+                if not await is_paused(session):
+                    user_ids = (await session.exec(select(BinanceCredential.user_id))).all()
+                    pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
+                    for signal in pending:
+                        for user_id in user_ids:
+                            if await is_account_paused(session, user_id):
+                                continue
+                            try:
+                                await _process_signal(session, signal, user_id, client)
+                            except Exception:
+                                logger.exception(
+                                    "risk engine failed processing signal %s for user %s", signal.id, user_id
+                                )
+                        if user_ids:
+                            signal.status = "DISPATCHED"
+                            await session.commit()
+                try:
+                    await _monitor_positions(session)
+                except Exception:
+                    logger.exception("risk engine failed monitoring positions")
+            await asyncio.sleep(CYCLE_INTERVAL_SEC)

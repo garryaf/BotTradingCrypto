@@ -155,7 +155,7 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Description:**  
   Mendokumentasikan mekanisme komunikasi, batas tanggung jawab (*boundary responsibility*), dan protokol interoperabilitas antara Core High-Speed Engine berbasis Rust (`engine/`) dengan Python FastAPI (`backend/`).
 
-  ADR-006 menetapkan arsitektur Hibrida Python + Rust, dan modul Rust (`engine/src/risk_gate/mod.rs`) telah terbukti mampu mengevaluasi 9 pintu risiko dalam 292 nanodetik. Namun, dokumen arsitektur belum merinci protokol komunikasi runtime antara kedua layanan (apakah menggunakan REST IPC lokal, PyO3 FFI, atau gRPC internal di Docker bridge).
+  ADR-006 menetapkan arsitektur Hibrida Python + Rust, dengan **target** evaluasi 9 pintu risiko ≤ 300 nanodetik di Rust. *(Koreksi 21 Okt 2026: modul `engine/src/risk_gate/mod.rs` tidak ada di repo; angka 292ns belum pernah terukur. Client IPC Python sudah ada di `backend/src/risk/engine_client.py`.)* Namun, dokumen arsitektur belum merinci protokol komunikasi runtime antara kedua layanan (apakah menggunakan REST IPC lokal, PyO3 FFI, atau gRPC internal di Docker bridge).
 - **Related Audit Finding IDs:** `AUDIT-FINDING-04`
 - **Related Requirement/Rule IDs:** `ADR-006`, `NFR-PRF-01` (Evaluasi risiko sub-milidetik)
 - **Existing Document References:**  

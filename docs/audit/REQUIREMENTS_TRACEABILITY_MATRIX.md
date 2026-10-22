@@ -66,6 +66,7 @@ Dokumen ini memetakan setiap ID Kebutuhan Bisnis (`BR`), Kebutuhan Fungsional (`
 | ID | Deskripsi Ringkas | File Implementasi | File Test | Status |
 |---|---|---|---|---|
 | **FR-RSK-01** | 9-Gate Non-Bypassable Risk Check | `backend/src/risk/gate.py` (`evaluate_risk`) · `backend/src/risk/engine.py` · `backend/src/risk/sizing.py` | `backend/src/risk/test_gate.py` | ✅ Fulfilled |
+| **NFR-PRF-01 / ADR-006** | Rust Risk Gate IPC client (fail-closed, opt-in via `ENGINE_URL`) | `backend/src/risk/engine_client.py` · `backend/src/risk/engine.py` (`_signal_candidate`) · `docker-compose*.yml` (profile `engine`) | `backend/src/risk/test_engine_client.py` | ⚠️ Partial — client & compose selesai; kode Rust `engine/src` belum ada, latensi ≤ 10ms belum terukur |
 
 ---
 

@@ -52,6 +52,7 @@ Setiap perubahan kode (*pull request*) wajib memenuhi piramida pengujian berikut
   - **RPC Quota Exhaustion:** Mensimulasikan kuota RPC habis (HTTP 429 berulang). Ingestion pipeline wajib menerapkan *exponential backoff* dan beralih ke status jeda (*paused*).
   - **LLM Prompt Injection & Output Cacat:** Mengirimkan nama token berbahaya atau respons LLM tanpa format JSON valid. Parser Pydantic wajib menolak respons tanpa mengeksekusi order.
   - **Disconnect Network:** Memutus koneksi internet selama 60 detik; sistem tidak boleh mengalami crash atau corrupt data.
+  - **Rust Engine Gagal (IPC fail-closed):** `backend/src/risk/test_engine_client.py` (jalankan `python -m src.risk.test_engine_client`) memakai `httpx.MockTransport` — hanya di test, bukan di runtime — untuk 10 skenario: lolos, ditolak engine, timeout, koneksi ditolak, HTTP 5xx, bukan JSON, skema salah, `passed=true` dengan gate gagal, `passed=true` tanpa gate, verdict untuk `signal_id` lain. Semua kegagalan wajib menghasilkan `passed=False`.
 
 ### 2.4 Simulation & Accounting Testing (Paper Broker Verification)
 - **Fokus:** Memverifikasi bahwa simulator eksekusi mencerminkan kondisi pasar riil dan tidak mengalami distorsi akuntansi.
@@ -80,6 +81,7 @@ Mengacu pada spesifikasi [LIVE_TRADING_SAFETY_GATE.md](file:///Users/nabilartana
 | **Ingestion** | AC-ING-01 s.d. AC-ING-04 | Mock stream 100 signature, inject stale data, mock HTTP 429 | `pytest`, `respx` | 100% dedup, 0 unhandled exceptions |
 | **AI Gateway** | AC-AI-01 s.d. AC-AI-04 | Fuzzing schema JSON, inject HTTP 500 fallback, prompt injection test | `pytest`, `pydantic` | 100% valid schema, fallback < 2.0s |
 | **Risk Gate** | AC-RSK-01 s.d. AC-RSK-05 | Uji batas 9 pintu serial, feed melanggar daily loss 2% & drawdown 8% | `pytest` | 100% penolakan deterministik |
+| **Rust Engine IPC** | Spec §5 (fail-closed) | 10 skenario mock transport (timeout, 5xx, koneksi ditolak, JSON/skema invalid, verdict tak konsisten) | plain-assert `python -m src.risk.test_engine_client` | 100% kegagalan → `passed=False` |
 | **Accounting** | AC-SIM-01 s.d. AC-SIM-03 | 50 cycle order acak, verifikasi high-water mark & deviasi | `pytest` | Deviasi akuntansi = 0.00 |
 | **Telegram** | AC-CTL-01 s.d. AC-CTL-03 | Inject unauthorized user ID, pemicu `/kill` beruntun 5x | `pytest-asyncio` | Respon $\le 2.0$s, unauthorized 100% drop |
 | **DevSecOps** | AC-OPS-01 s.d. AC-OPS-03 | Stress test container 2 jam di M1 Pro, regex scan secrets | Docker stats, `trufflehog` / regex | RAM $\le 8.0$ GB, 0 secrets bocor |
