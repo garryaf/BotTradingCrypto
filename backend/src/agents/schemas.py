@@ -11,7 +11,7 @@ class RegimeResult(BaseModel):
 
     symbol: str
     regime: Literal["TRENDING_BULLISH", "TRENDING_BEARISH", "SIDEWAYS", "VOLATILE_HIGH_RISK"]
-    adx_strength: float
+    adx_strength: float | None = None  # ADX isn't in the context (indicators.py is EMA/RSI only); model returns null
     volatility_state: str
     recommended_strategy_type: str
     confidence: float = Field(ge=0, le=1)
@@ -24,7 +24,7 @@ class SafetyResult(BaseModel):
     venue_type: str
     contract_safety_score: float
     risk_classification: str
-    checks_passed: dict[str, bool] = Field(default_factory=dict)
+    checks_passed: dict[str, bool | None] = Field(default_factory=dict)  # null = check N/A for the venue
     verdict: Literal["APPROVED", "REJECTED"]
 
 
@@ -34,12 +34,13 @@ class SignalResult(BaseModel):
     signal_id: str
     symbol: str
     strategy_type: str
-    action: Literal["BUY", "SELL", "HOLD"]
-    entry_price: float
-    stop_loss: float
-    take_profit_1: float
-    take_profit_2: float
-    estimated_winrate_pct: float
+    action: Literal["BUY", "SELL", "HOLD", "NO_TRADE"]  # NO_TRADE: score < 0.75 per SKILL.md
+    # Price fields are null when the model decides not to trade; hermes drops BUY/SELL missing any of them.
+    entry_price: float | None = None
+    stop_loss: float | None = None
+    take_profit_1: float | None = None
+    take_profit_2: float | None = None
+    estimated_winrate_pct: float | None = None
     confidence_score: float = Field(ge=0, le=1)
-    risk_reward_ratio: float
+    risk_reward_ratio: float | None = None
     rationale: str

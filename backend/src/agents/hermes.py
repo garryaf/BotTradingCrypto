@@ -18,7 +18,7 @@ from sqlmodel import select
 
 from ..db import async_session_factory
 from ..gateway.client import GatewayError, chat_completion_with_fallback
-from ..models import AgentRun, LLMRequest, MarketOHLCV, Token, TradingSignal
+from ..models import AgentRun, LLMRequest, MarketOHLCV, MarketSnapshot, Token, TradingSignal
 from .indicators import ema, rsi
 from .schemas import RegimeResult, SafetyResult, SignalResult
 from .skills import load_skill_prompt
@@ -36,10 +36,10 @@ async def build_market_context(session, token: Token) -> dict | None:
         await session.exec(
             select(MarketOHLCV)
             .where(MarketOHLCV.token_id == token.id, MarketOHLCV.interval == "M1")
-            .order_by(MarketOHLCV.bucket_time.asc())
+            .order_by(MarketOHLCV.bucket_time.desc())
             .limit(60)
         )
-    ).all()
+    ).all()[::-1]  # newest 60 candles, back in chronological order
     closes = [float(r.close) for r in rows]
     if len(closes) < MIN_CANDLES:
         return None
@@ -62,7 +62,8 @@ async def _call_skill(session, client, agent_run_id, skill_name: str, context: d
 
     status_code, parsed, response_json = 200, None, {}
     try:
-        response_json = json.loads(content)
+        # The model wraps the JSON in ```json fences about half the time despite json_object mode.
+        response_json = json.loads(content[content.find("{") : content.rfind("}") + 1])
         parsed = schema.model_validate(response_json)
     except (json.JSONDecodeError, ValidationError):
         status_code = 422
@@ -105,8 +106,23 @@ async def run_hermes_cycle(session, client: httpx.AsyncClient, symbol: str) -> T
         regime: RegimeResult = await _call_skill(
             session, client, run.id, "market-regime-detection", ctx, RegimeResult
         )
+        market = (
+            await session.exec(
+                select(MarketSnapshot)
+                .where(MarketSnapshot.token_id == token.id)
+                .order_by(MarketSnapshot.snapshot_time.desc())
+            )
+        ).first()
+        # The skill checks Binance Spot rules; with only a symbol the model has nothing to check and returns {}.
+        safety_ctx = {
+            "symbol": ctx["symbol"],
+            "venue_type": "BINANCE_SPOT",
+            "status": "Trading",
+            "spread_pct": float((market.spread_pct or 0) if market else 0),
+            "volume_24h_usd": float((market.volume_24h_usd or 0) if market else 0),
+        }
         safety: SafetyResult = await _call_skill(
-            session, client, run.id, "token-and-contract-safety", {"symbol": ctx["symbol"]}, SafetyResult
+            session, client, run.id, "token-and-contract-safety", safety_ctx, SafetyResult
         )
         if safety.verdict != "APPROVED":
             run.status, run.execution_time_ms = "SUCCESS", Decimal(str(round((time.monotonic() - start) * 1000, 2)))
@@ -131,6 +147,10 @@ async def run_hermes_cycle(session, client: httpx.AsyncClient, symbol: str) -> T
     await session.commit()
 
     if signal.action not in ("BUY", "SELL") or signal.confidence_score < CONFIDENCE_THRESHOLD:
+        return None
+    if None in (signal.entry_price, signal.stop_loss, signal.take_profit_1, signal.take_profit_2,
+                signal.estimated_winrate_pct):
+        logger.warning("Hermes dropped %s %s: incomplete price levels", ctx["symbol"], signal.action)
         return None
 
     trading_signal = TradingSignal(

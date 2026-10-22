@@ -91,8 +91,34 @@ def test_schema_drops_injected_extra_fields():
     assert result.action == "BUY"
 
 
+def test_schema_accepts_no_trade_with_null_prices():
+    result = SignalResult.model_validate(
+        {"signal_id": "s", "symbol": "BTCUSDT", "strategy_type": "MEAN_REVERSION", "action": "NO_TRADE",
+         "entry_price": None, "stop_loss": None, "confidence_score": 0.25, "rationale": "weak"}
+    )
+    assert result.action == "NO_TRADE" and result.stop_loss is None
+
+
+def test_call_skill_parses_fenced_json():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from .hermes import _call_skill
+
+    fenced = '```json\n{"regime": "SIDEWAYS", "symbol": "BTCUSDT", "confidence": 0.5, "volatility_state": "LOW", "recommended_strategy_type": "WAIT"}\n```'
+    session = MagicMock(commit=AsyncMock())
+    with patch("src.agents.hermes.chat_completion_with_fallback", AsyncMock(return_value=("P", "m", fenced, {}, 1.0))), \
+         patch("src.agents.hermes.load_skill_prompt", return_value="prompt"):
+        from .schemas import RegimeResult
+
+        out = asyncio.run(_call_skill(session, None, "run", "market-regime-detection", {}, RegimeResult))
+    assert out.regime == "SIDEWAYS"
+
+
 if __name__ == "__main__":
     test_fallback_to_secondary_on_primary_500()
+    test_call_skill_parses_fenced_json()
+    test_schema_accepts_no_trade_with_null_prices()
     test_schema_rejects_out_of_contract_action()
     test_schema_drops_injected_extra_fields()
     print("ok")
