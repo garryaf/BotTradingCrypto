@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     telegram_allowed_user_id: str = ""
     telegram_allowed_chat_id: str = ""
 
+    jwt_secret_key: str = ""
+    field_encryption_key: str = ""
+
     @property
     def solana_rpc_url(self) -> str:
         # Q-04: Helius Free Tier primer, Public RPC sebagai cadangan jika key belum diisi.

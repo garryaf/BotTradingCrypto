@@ -1,9 +1,17 @@
 """Risk Gate + Paper Broker orchestration loop — ROADMAP.md TASK-4.1-4.4.
 
-Pipeline per cycle: expire stale PENDING signals -> evaluate_risk() each
-remaining PENDING signal -> on pass, simulate_fills() and open a position
--> mark-to-market / TP1 / TP2 / SL every open position -> refresh the
-circuit breaker flag from the latest portfolio snapshot.
+Pipeline per cycle: expire stale PENDING signals -> fan each remaining
+PENDING signal out to every linked account (evaluate_risk() with THAT
+account's own portfolio numbers) -> on pass, simulate_fills() and open a
+position for that account -> mark-to-market / TP1 / TP2 / SL every open
+position, grouped by account -> refresh that account's own circuit breaker
+from its own latest portfolio snapshot.
+
+A TradingSignal is shared market analysis (see agents/hermes.py), not an
+account-owned row — it has no single pass/fail outcome once multiple
+accounts can each accept or reject it on their own numbers. Its `status`
+only tracks whether it's still awaiting dispatch; each account's actual
+outcome lives on their own RiskCheck.passed.
 
 Ledger convention: a position's recorded value is its COST BASIS while
 opening (so opening a trade only ever moves money cash -> positions, equity
@@ -12,14 +20,17 @@ monitored (so floating PnL shows up before a position closes).
 """
 import asyncio
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
+from uuid import UUID
 
 from sqlmodel import select
 
 from ..config import settings
 from ..db import async_session_factory
 from ..models import (
+    BinanceCredential,
     MarketSnapshot,
     PaperOrder,
     PaperTrade,
@@ -38,18 +49,40 @@ from .ledger import next_snapshot
 logger = logging.getLogger("risk.engine")
 
 CYCLE_INTERVAL_SEC = 5
+
+# Global, operator-wide — unchanged, still driven by api/control.py + the Telegram bot.
 CIRCUIT_BREAKER_KEY = "CIRCUIT_BREAKER_ACTIVE"
 PAUSED_KEY = "TRADING_PAUSED"
 
+OPEN_POSITION_STATUSES = ["OPEN", "PARTIALLY_CLOSED"]
 
-async def get_latest_portfolio(session) -> PortfolioSnapshot:
+
+def _account_paused_key(user_id: UUID) -> str:
+    return f"ACCOUNT_PAUSED:{user_id}"
+
+
+def _account_breaker_key(user_id: UUID) -> str:
+    return f"ACCOUNT_CIRCUIT_BREAKER:{user_id}"
+
+
+async def _flag_is_set(session, key: str) -> bool:
+    row = (await session.exec(select(UserSetting).where(UserSetting.key == key))).first()
+    return bool(row and row.value == "true")
+
+
+async def get_latest_portfolio(session, user_id: UUID) -> PortfolioSnapshot:
     snap = (
-        await session.exec(select(PortfolioSnapshot).order_by(PortfolioSnapshot.snapshot_time.desc()))
+        await session.exec(
+            select(PortfolioSnapshot)
+            .where(PortfolioSnapshot.user_id == user_id)
+            .order_by(PortfolioSnapshot.snapshot_time.desc())
+        )
     ).first()
     if snap:
         return snap
     capital = settings.initial_paper_capital_usd
     snap = PortfolioSnapshot(
+        user_id=user_id,
         total_equity_usd=capital,
         cash_balance_usd=capital,
         open_positions_value_usd=Decimal(0),
@@ -61,32 +94,53 @@ async def get_latest_portfolio(session) -> PortfolioSnapshot:
     return snap
 
 
-async def _circuit_breaker_active(session) -> bool:
-    row = (await session.exec(select(UserSetting).where(UserSetting.key == CIRCUIT_BREAKER_KEY))).first()
-    return bool(row and row.value == "true")
+async def count_open_positions(session, user_id: UUID) -> int:
+    rows = (
+        await session.exec(
+            select(Position).where(Position.user_id == user_id, Position.status.in_(OPEN_POSITION_STATUSES))
+        )
+    ).all()
+    return len(rows)
+
+
+async def count_all_open_positions(session) -> int:
+    """Operator-level total across every account — used by the global /control/status only."""
+    rows = (await session.exec(select(Position).where(Position.status.in_(OPEN_POSITION_STATUSES)))).all()
+    return len(rows)
 
 
 async def is_paused(session) -> bool:
-    row = (await session.exec(select(UserSetting).where(UserSetting.key == PAUSED_KEY))).first()
-    return bool(row and row.value == "true")
+    """Global operator pause — unchanged, Telegram bot + api/control.py."""
+    return await _flag_is_set(session, PAUSED_KEY)
 
 
-async def _set_circuit_breaker(session, active: bool, reason: str) -> None:
-    row = (await session.exec(select(UserSetting).where(UserSetting.key == CIRCUIT_BREAKER_KEY))).first()
+async def is_account_paused(session, user_id: UUID) -> bool:
+    """True if the operator paused everyone, OR this account's own circuit breaker tripped."""
+    if await is_paused(session):
+        return True
+    return await _flag_is_set(session, _account_paused_key(user_id)) or await _flag_is_set(
+        session, _account_breaker_key(user_id)
+    )
+
+
+async def _set_account_circuit_breaker(session, user_id: UUID, active: bool, reason: str) -> None:
+    key = _account_breaker_key(user_id)
+    row = (await session.exec(select(UserSetting).where(UserSetting.key == key))).first()
     was_active = bool(row and row.value == "true")
     if row:
         row.value = "true" if active else "false"
         row.updated_at = datetime.now(timezone.utc)
     else:
-        session.add(UserSetting(key=CIRCUIT_BREAKER_KEY, value="true" if active else "false", is_mutable=False))
+        session.add(UserSetting(key=key, value="true" if active else "false", is_mutable=False))
     if active and not was_active:
-        session.add(SystemEvent(event_type="CIRCUIT_BREAKER_TRIGGERED", severity="CRITICAL", message=reason))
+        session.add(
+            SystemEvent(
+                event_type="ACCOUNT_CIRCUIT_BREAKER_TRIGGERED",
+                severity="CRITICAL",
+                message=f"[user {user_id}] {reason}",
+            )
+        )
     await session.commit()
-
-
-async def count_open_positions(session) -> int:
-    rows = (await session.exec(select(Position).where(Position.status.in_(["OPEN", "PARTIALLY_CLOSED"])))).all()
-    return len(rows)
 
 
 async def _expire_stale_signals(session) -> None:
@@ -103,7 +157,7 @@ def _execution_venue(chain: str) -> str:
 
 
 async def _write_snapshot(
-    session, prev: PortfolioSnapshot, *, cash_balance_usd: Decimal, open_positions_value_usd: Decimal,
+    session, user_id: UUID, prev: PortfolioSnapshot, *, cash_balance_usd: Decimal, open_positions_value_usd: Decimal,
     realized_pnl_delta: Decimal = Decimal(0),
 ) -> None:
     fields = next_snapshot(
@@ -112,16 +166,18 @@ async def _write_snapshot(
         high_water_mark_usd=prev.high_water_mark_usd,
         daily_realized_pnl_usd=prev.daily_realized_pnl_usd + realized_pnl_delta,
     )
-    session.add(PortfolioSnapshot(**fields))
+    session.add(PortfolioSnapshot(user_id=user_id, **fields))
     await session.commit()
 
     if fields["daily_loss_pct"] >= settings.daily_loss_limit_pct * 100:
-        await _set_circuit_breaker(session, True, f"Daily loss {fields['daily_loss_pct']:.2f}% >= limit")
+        await _set_account_circuit_breaker(session, user_id, True, f"Daily loss {fields['daily_loss_pct']:.2f}% >= limit")
     elif fields["current_drawdown_pct"] >= settings.max_drawdown_limit_pct * 100:
-        await _set_circuit_breaker(session, True, f"Drawdown {fields['current_drawdown_pct']:.2f}% >= limit")
+        await _set_account_circuit_breaker(session, user_id, True, f"Drawdown {fields['current_drawdown_pct']:.2f}% >= limit")
 
 
-async def _process_signal(session, signal: TradingSignal) -> None:
+async def _process_signal(session, signal: TradingSignal, user_id: UUID) -> None:
+    """Evaluate + (maybe) execute one shared signal against one account's own numbers.
+    Never mutates signal.status — the caller owns that once it's offered to every account."""
     token = await session.get(Token, signal.token_id)
     market = (
         await session.exec(
@@ -133,9 +189,9 @@ async def _process_signal(session, signal: TradingSignal) -> None:
     if market is None:
         return  # no market data yet for this token — leave PENDING until ingestion catches up
 
-    portfolio = await get_latest_portfolio(session)
-    circuit_breaker_active = await _circuit_breaker_active(session)
-    open_positions = await count_open_positions(session)
+    portfolio = await get_latest_portfolio(session, user_id)
+    circuit_breaker_active = await is_account_paused(session, user_id)
+    open_positions = await count_open_positions(session, user_id)
 
     outcome = evaluate_risk(
         action=signal.action,
@@ -158,6 +214,7 @@ async def _process_signal(session, signal: TradingSignal) -> None:
     )
 
     risk_check = RiskCheck(
+        user_id=user_id,
         trading_signal_id=signal.id,
         passed=outcome.passed,
         expectancy_check=outcome.expectancy_check,
@@ -177,8 +234,6 @@ async def _process_signal(session, signal: TradingSignal) -> None:
     await session.refresh(risk_check)
 
     if not outcome.passed:
-        signal.status = "REJECTED"
-        await session.commit()
         return
 
     venue = _execution_venue(token.chain)
@@ -188,7 +243,7 @@ async def _process_signal(session, signal: TradingSignal) -> None:
     )
     order = PaperOrder(
         risk_check_id=risk_check.id,
-        client_order_id=f"ORD-{signal.id}",
+        client_order_id=f"ORD-{risk_check.id}",
         symbol=signal.symbol,
         side=signal.action,
         requested_quantity=outcome.quantity,
@@ -201,6 +256,7 @@ async def _process_signal(session, signal: TradingSignal) -> None:
     await session.refresh(order)
 
     position = Position(
+        user_id=user_id,
         token_id=token.id,
         symbol=signal.symbol,
         current_quantity=Decimal(0),
@@ -237,12 +293,11 @@ async def _process_signal(session, signal: TradingSignal) -> None:
 
     position.current_quantity = total_qty
     position.average_entry_price = total_notional / total_qty if total_qty else Decimal(0)
-    signal.status = "EXECUTED"
     await session.commit()
 
     # Cash -> position at cost basis; the fee is the only immediate equity loss.
     await _write_snapshot(
-        session, portfolio,
+        session, user_id, portfolio,
         cash_balance_usd=portfolio.cash_balance_usd - total_notional - total_fee,
         open_positions_value_usd=portfolio.open_positions_value_usd + total_notional,
         realized_pnl_delta=-total_fee,
@@ -250,70 +305,76 @@ async def _process_signal(session, signal: TradingSignal) -> None:
 
 
 async def _monitor_positions(session) -> None:
-    positions = (await session.exec(select(Position).where(Position.status.in_(["OPEN", "PARTIALLY_CLOSED"])))).all()
+    positions = (await session.exec(select(Position).where(Position.status.in_(OPEN_POSITION_STATUSES)))).all()
     if not positions:
         return
-    portfolio = await get_latest_portfolio(session)
-    total_positions_value = Decimal(0)
-    cash_inflow = Decimal(0)
-    realized_delta = Decimal(0)
 
+    by_user: dict[UUID, list[Position]] = defaultdict(list)
     for pos in positions:
-        market = (
-            await session.exec(
-                select(MarketSnapshot).where(MarketSnapshot.token_id == pos.token_id)
-                .order_by(MarketSnapshot.snapshot_time.desc())
-            )
-        ).first()
-        if not market:
-            total_positions_value += pos.current_quantity * pos.average_entry_price
-            continue
-        price = market.price_usd
+        by_user[pos.user_id].append(pos)
 
-        if not pos.is_tp1_hit and price >= pos.take_profit_1:
-            close_qty = pos.current_quantity / 2
-            proceeds = close_qty * price
-            fee_usd, _ = fee_for_venue(proceeds, "Binance_SPOT_SIM", BINANCE_TAKER_FEE_PCT)
-            pnl = proceeds - fee_usd - (close_qty * pos.average_entry_price)
-            session.add(
-                PaperTrade(paper_order_id=pos.id, position_id=pos.id, executed_quantity=close_qty,
-                           executed_price=price, transaction_fee_usd=fee_usd, execution_venue="Binance_SPOT_SIM")
-            )
-            pos.current_quantity -= close_qty
-            pos.is_tp1_hit = True
-            pos.current_stop_loss = pos.average_entry_price  # move SL to breakeven
-            pos.status = "PARTIALLY_CLOSED"
-            pos.realized_pnl_usd += pnl
-            cash_inflow += proceeds - fee_usd
-            realized_delta += pnl
-        elif price >= pos.take_profit_2 or price <= pos.current_stop_loss:
-            proceeds = pos.current_quantity * price
-            fee_usd, _ = fee_for_venue(proceeds, "Binance_SPOT_SIM", BINANCE_TAKER_FEE_PCT)
-            pnl = proceeds - fee_usd - (pos.current_quantity * pos.average_entry_price)
-            session.add(
-                PaperTrade(paper_order_id=pos.id, position_id=pos.id, executed_quantity=pos.current_quantity,
-                           executed_price=price, transaction_fee_usd=fee_usd, execution_venue="Binance_SPOT_SIM")
-            )
-            pos.realized_pnl_usd += pnl
-            cash_inflow += proceeds - fee_usd
-            realized_delta += pnl
-            pos.current_quantity = Decimal(0)
-            pos.status = "CLOSED"
-            pos.closed_at = datetime.now(timezone.utc)
-        else:
-            pos.unrealized_pnl_usd = pos.current_quantity * (price - pos.average_entry_price)
+    for user_id, user_positions in by_user.items():
+        portfolio = await get_latest_portfolio(session, user_id)
+        total_positions_value = Decimal(0)
+        cash_inflow = Decimal(0)
+        realized_delta = Decimal(0)
 
-        pos.updated_at = datetime.now(timezone.utc)
-        if pos.status != "CLOSED":
-            total_positions_value += pos.current_quantity * price
+        for pos in user_positions:
+            market = (
+                await session.exec(
+                    select(MarketSnapshot).where(MarketSnapshot.token_id == pos.token_id)
+                    .order_by(MarketSnapshot.snapshot_time.desc())
+                )
+            ).first()
+            if not market:
+                total_positions_value += pos.current_quantity * pos.average_entry_price
+                continue
+            price = market.price_usd
 
-    await session.commit()
-    await _write_snapshot(
-        session, portfolio,
-        cash_balance_usd=portfolio.cash_balance_usd + cash_inflow,
-        open_positions_value_usd=total_positions_value,
-        realized_pnl_delta=realized_delta,
-    )
+            if not pos.is_tp1_hit and price >= pos.take_profit_1:
+                close_qty = pos.current_quantity / 2
+                proceeds = close_qty * price
+                fee_usd, _ = fee_for_venue(proceeds, "Binance_SPOT_SIM", BINANCE_TAKER_FEE_PCT)
+                pnl = proceeds - fee_usd - (close_qty * pos.average_entry_price)
+                session.add(
+                    PaperTrade(paper_order_id=pos.id, position_id=pos.id, executed_quantity=close_qty,
+                               executed_price=price, transaction_fee_usd=fee_usd, execution_venue="Binance_SPOT_SIM")
+                )
+                pos.current_quantity -= close_qty
+                pos.is_tp1_hit = True
+                pos.current_stop_loss = pos.average_entry_price  # move SL to breakeven
+                pos.status = "PARTIALLY_CLOSED"
+                pos.realized_pnl_usd += pnl
+                cash_inflow += proceeds - fee_usd
+                realized_delta += pnl
+            elif price >= pos.take_profit_2 or price <= pos.current_stop_loss:
+                proceeds = pos.current_quantity * price
+                fee_usd, _ = fee_for_venue(proceeds, "Binance_SPOT_SIM", BINANCE_TAKER_FEE_PCT)
+                pnl = proceeds - fee_usd - (pos.current_quantity * pos.average_entry_price)
+                session.add(
+                    PaperTrade(paper_order_id=pos.id, position_id=pos.id, executed_quantity=pos.current_quantity,
+                               executed_price=price, transaction_fee_usd=fee_usd, execution_venue="Binance_SPOT_SIM")
+                )
+                pos.realized_pnl_usd += pnl
+                cash_inflow += proceeds - fee_usd
+                realized_delta += pnl
+                pos.current_quantity = Decimal(0)
+                pos.status = "CLOSED"
+                pos.closed_at = datetime.now(timezone.utc)
+            else:
+                pos.unrealized_pnl_usd = pos.current_quantity * (price - pos.average_entry_price)
+
+            pos.updated_at = datetime.now(timezone.utc)
+            if pos.status != "CLOSED":
+                total_positions_value += pos.current_quantity * price
+
+        await session.commit()
+        await _write_snapshot(
+            session, user_id, portfolio,
+            cash_balance_usd=portfolio.cash_balance_usd + cash_inflow,
+            open_positions_value_usd=total_positions_value,
+            realized_pnl_delta=realized_delta,
+        )
 
 
 async def run_risk_engine_loop() -> None:
@@ -321,12 +382,19 @@ async def run_risk_engine_loop() -> None:
         async with async_session_factory() as session:
             await _expire_stale_signals(session)
             if not await is_paused(session):
+                user_ids = (await session.exec(select(BinanceCredential.user_id))).all()
                 pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
                 for signal in pending:
-                    try:
-                        await _process_signal(session, signal)
-                    except Exception:
-                        logger.exception("risk engine failed processing signal %s", signal.id)
+                    for user_id in user_ids:
+                        if await is_account_paused(session, user_id):
+                            continue
+                        try:
+                            await _process_signal(session, signal, user_id)
+                        except Exception:
+                            logger.exception("risk engine failed processing signal %s for user %s", signal.id, user_id)
+                    if user_ids:
+                        signal.status = "DISPATCHED"
+                        await session.commit()
             try:
                 await _monitor_positions(session)
             except Exception:

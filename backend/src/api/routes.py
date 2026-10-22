@@ -5,22 +5,29 @@ from fastapi import APIRouter, Depends
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from ..auth.dependencies import get_current_admin, get_current_user
 from ..backtest.data import fetch_historical_bars
 from ..backtest.engine import run_backtest
 from ..db import get_session
-from ..models import PortfolioSnapshot, Position, RiskCheck, TradingSignal
+from ..models import PortfolioSnapshot, Position, RiskCheck, TradingSignal, User
+from ..risk.engine import get_latest_portfolio
 from . import control as control_actions
 
 router = APIRouter(prefix="/api/v1")
 
 
 @router.get("/portfolio")
-async def get_portfolio(session: AsyncSession = Depends(get_session)):
+async def get_portfolio(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     history = (
-        await session.exec(select(PortfolioSnapshot).order_by(PortfolioSnapshot.snapshot_time.desc()).limit(200))
+        await session.exec(
+            select(PortfolioSnapshot)
+            .where(PortfolioSnapshot.user_id == user.id)
+            .order_by(PortfolioSnapshot.snapshot_time.desc())
+            .limit(200)
+        )
     ).all()
     if not history:
-        return {"connected": False}
+        history = [await get_latest_portfolio(session, user.id)]  # new account: seed initial paper capital
     latest = history[0]
     return {
         "connected": True,
@@ -40,8 +47,12 @@ async def get_portfolio(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/positions")
-async def get_positions(session: AsyncSession = Depends(get_session)):
-    rows = (await session.exec(select(Position).order_by(Position.opened_at.desc()).limit(50))).all()
+async def get_positions(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    rows = (
+        await session.exec(
+            select(Position).where(Position.user_id == user.id).order_by(Position.opened_at.desc()).limit(50)
+        )
+    ).all()
     return [
         {
             "id": str(p.id),
@@ -80,9 +91,13 @@ async def get_signals(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/risk/status")
-async def get_risk_status(session: AsyncSession = Depends(get_session)):
-    latest_check = (await session.exec(select(RiskCheck).order_by(RiskCheck.evaluated_at.desc()))).first()
-    status = await control_actions.system_status(session)
+async def get_risk_status(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    latest_check = (
+        await session.exec(
+            select(RiskCheck).where(RiskCheck.user_id == user.id).order_by(RiskCheck.evaluated_at.desc())
+        )
+    ).first()
+    status = await control_actions.account_status(session, user.id)
     gates = None
     if latest_check:
         gates = {
@@ -104,23 +119,38 @@ async def get_risk_status(session: AsyncSession = Depends(get_session)):
 
 
 @router.post("/control/kill")
-async def control_kill(session: AsyncSession = Depends(get_session)):
+async def control_kill(admin: User = Depends(get_current_admin), session: AsyncSession = Depends(get_session)):
     return await control_actions.emergency_stop(session)
 
 
 @router.post("/control/pause")
-async def control_pause(session: AsyncSession = Depends(get_session)):
+async def control_pause(admin: User = Depends(get_current_admin), session: AsyncSession = Depends(get_session)):
     return await control_actions.pause_trading(session)
 
 
 @router.post("/control/resume")
-async def control_resume(session: AsyncSession = Depends(get_session)):
+async def control_resume(admin: User = Depends(get_current_admin), session: AsyncSession = Depends(get_session)):
     return await control_actions.resume_trading(session)
 
 
 @router.get("/control/status")
-async def control_status(session: AsyncSession = Depends(get_session)):
+async def control_status(admin: User = Depends(get_current_admin), session: AsyncSession = Depends(get_session)):
     return await control_actions.system_status(session)
+
+
+@router.post("/control/account/pause")
+async def control_account_pause(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    return await control_actions.pause_account(session, user.id)
+
+
+@router.post("/control/account/resume")
+async def control_account_resume(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    return await control_actions.resume_account(session, user.id)
+
+
+@router.get("/control/account/status")
+async def control_account_status(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    return await control_actions.account_status(session, user.id)
 
 
 @router.get("/backtest/run")

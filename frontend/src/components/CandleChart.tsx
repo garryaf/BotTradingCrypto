@@ -28,28 +28,28 @@ export function CandleChart({ symbol, interval }: { symbol: string; interval: st
     const chart = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#7b828f",
-        fontFamily: "var(--font-geist-mono)",
+        textColor: "#8a8a8a",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: "rgba(255,178,36,0.06)" },
+        horzLines: { color: "rgba(255,178,36,0.06)" },
       },
-      timeScale: { borderColor: "rgba(255,255,255,0.08)", timeVisible: true },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.08)" },
+      timeScale: { borderColor: "rgba(255,178,36,0.22)", timeVisible: true },
+      rightPriceScale: { borderColor: "rgba(255,178,36,0.22)" },
       crosshair: {
-        vertLine: { color: "rgba(91,140,255,0.4)", labelBackgroundColor: "#11141b" },
-        horzLine: { color: "rgba(91,140,255,0.4)", labelBackgroundColor: "#11141b" },
+        vertLine: { color: "rgba(0,217,255,0.5)", labelBackgroundColor: "#0b0b0b" },
+        horzLine: { color: "rgba(0,217,255,0.5)", labelBackgroundColor: "#0b0b0b" },
       },
       autoSize: true,
     });
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#3ddc84",
-      downColor: "#ff5c5c",
+      upColor: "#00e676",
+      downColor: "#ff3b30",
       borderVisible: false,
-      wickUpColor: "#3ddc84",
-      wickDownColor: "#ff5c5c",
+      wickUpColor: "#00e676",
+      wickDownColor: "#ff3b30",
     });
     chartRef.current = chart;
     seriesRef.current = series;

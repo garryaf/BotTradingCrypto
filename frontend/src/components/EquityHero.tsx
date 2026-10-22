@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
-import { PnlGlow } from "./PnlGlow";
 import { CountUp } from "./CountUp";
-import { ProfitLossMascot } from "./ProfitLossMascot";
-import { ProfitLossSplash } from "./ProfitLossSplash";
 
 type PortfolioResponse = {
   connected: boolean;
@@ -58,21 +54,10 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "pr
 
 export function EquityHero() {
   const data = usePolling<PortfolioResponse>("/api/v1/portfolio", 5000);
-  const [showSplash, setShowSplash] = useState(false);
-  const hasShownSplash = useRef(false);
-
-  useEffect(() => {
-    if (data?.connected && !hasShownSplash.current) {
-      hasShownSplash.current = true;
-      setShowSplash(true);
-      const timer = setTimeout(() => setShowSplash(false), 3200);
-      return () => clearTimeout(timer);
-    }
-  }, [data?.connected]);
 
   if (!data || !data.connected) {
     return (
-      <div className="rounded-xl border border-border bg-bg-panel p-5">
+      <div className="border border-border bg-bg-panel p-4">
         <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-text-faint">
           Equity Portofolio (Paper)
         </h2>
@@ -88,34 +73,25 @@ export function EquityHero() {
   const equityPoints = data.history.map((h) => h.equity);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-border bg-bg-panel p-5">
-      <ProfitLossSplash
-        show={showSplash}
-        positive={dailyProfit}
-        amount={data.daily_realized_pnl_usd}
-        onExitComplete={() => {}}
-      />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border border-border bg-bg-panel p-4">
       <div className="flex items-start justify-between">
         <div>
           <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-faint">
             Equity Portofolio (Paper)
           </h2>
           <div className="flex items-center gap-2.5">
-            <PnlGlow positive={dailyProfit}>
-              <p className={`font-mono text-2xl font-semibold ${dailyProfit ? "text-profit" : "text-loss"}`}>
-                $
-                <CountUp
-                  value={data.equity_usd}
-                  format={(n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                />
-              </p>
-            </PnlGlow>
-            <ProfitLossMascot positive={dailyProfit} />
+            <p className={`font-mono text-2xl font-semibold ${dailyProfit ? "text-profit" : "text-loss"}`}>
+              $
+              <CountUp
+                value={data.equity_usd}
+                format={(n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              />
+            </p>
           </div>
         </div>
         <Sparkline points={equityPoints} />
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Kas" value={`$${data.cash_balance_usd.toFixed(2)}`} />
         <Stat label="Posisi" value={`$${data.open_positions_value_usd.toFixed(2)}`} />
         <Stat

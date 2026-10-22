@@ -42,9 +42,9 @@ function Tick({ symbol, active, onClick }: { symbol: string; active: boolean; on
           initial={{
             backgroundColor:
               dir === "up"
-                ? "rgba(61,220,132,0.35)"
+                ? "rgba(0,230,118,0.35)"
                 : dir === "down"
-                ? "rgba(255,92,92,0.35)"
+                ? "rgba(255,59,48,0.35)"
                 : "rgba(0,0,0,0)",
           }}
           animate={{ backgroundColor: "rgba(0,0,0,0)" }}

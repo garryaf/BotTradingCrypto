@@ -12,6 +12,31 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# --- Domain 0: Auth & Accounts ----------------------------------------------
+
+class User(SQLModel, table=True):
+    __tablename__ = "users"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    email: str = Field(max_length=255, unique=True, index=True)
+    password_hash: str = Field(max_length=255)
+    role: str = Field(max_length=16, default="user")  # "user" | "admin"
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class BinanceCredential(SQLModel, table=True):
+    __tablename__ = "binance_credentials"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", unique=True, index=True)
+    api_key_encrypted: str
+    api_secret_encrypted: str
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
 # --- Domain 1: Observasi Pasar & Blockchain ---------------------------------
 
 class Wallet(SQLModel, table=True):
@@ -169,6 +194,7 @@ class RiskCheck(SQLModel, table=True):
     __tablename__ = "risk_checks"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
     trading_signal_id: UUID = Field(foreign_key="trading_signals.id", index=True)
     passed: bool
     expectancy_check: bool
@@ -208,6 +234,7 @@ class Position(SQLModel, table=True):
     __tablename__ = "positions"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
     token_id: UUID = Field(foreign_key="tokens.id", index=True)
     symbol: str = Field(max_length=32)
     status: str = Field(max_length=16, default="OPEN")
@@ -244,6 +271,7 @@ class PortfolioSnapshot(SQLModel, table=True):
     __tablename__ = "portfolio_snapshots"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
     total_equity_usd: Decimal = Field(max_digits=18, decimal_places=4)
     cash_balance_usd: Decimal = Field(max_digits=18, decimal_places=4)
     open_positions_value_usd: Decimal = Field(max_digits=18, decimal_places=4)

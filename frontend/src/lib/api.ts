@@ -4,8 +4,20 @@ import { useEffect, useRef, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Middleware only checks the cookie exists; a stale/invalid one (disabled user, rotated secret)
+// would otherwise strand the user on a 401 dashboard that /login bounces back to "/".
+let signingOut = false;
+function signOutOn401(res: Response) {
+  if (res.status !== 401 || signingOut) return;
+  signingOut = true;
+  fetch(`${API_BASE}/api/v1/auth/logout`, { method: "POST", credentials: "include" }).finally(() => {
+    window.location.href = "/login";
+  });
+}
+
 export async function apiPost<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { method: "POST" });
+  const res = await fetch(`${API_BASE}${path}`, { method: "POST", credentials: "include" });
+  signOutOn401(res);
   if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
   return res.json();
 }
@@ -19,7 +31,8 @@ export function usePolling<T>(path: string, intervalMs = 5000): T | null {
     let cancelled = false;
     async function tick() {
       try {
-        const res = await fetch(`${API_BASE}${path}`);
+        const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+        signOutOn401(res);
         if (!res.ok) return;
         const json = await res.json();
         if (!cancelled) setData(json);

@@ -310,6 +310,11 @@ DATABASE_URL=postgresql+asyncpg://autotrade_admin:GantiDenganPasswordAcakSangatK
 # ==============================================================================
 # Generate acak: openssl rand -hex 32
 BACKEND_API_SECRET=f3a1b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0
+# WAJIB — backend menolak start tanpa dua kunci ini. User pertama yang mendaftar di /register menjadi admin.
+# JWT_SECRET_KEY: openssl rand -hex 32
+JWT_SECRET_KEY=GantiDenganHexAcak64Karakter
+# FIELD_ENCRYPTION_KEY: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FIELD_ENCRYPTION_KEY=GantiDenganKunciFernet
 
 # ==============================================================================
 # SAFETY LOCK RULES (PENTING)

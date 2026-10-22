@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from .agents.hermes import run_hermes_loop
+from .api.admin_routes import router as admin_router
+from .api.auth_routes import router as auth_router
 from .api.routes import router as api_router
 from .config import settings
 from .control.telegram_bot import run_telegram_bot
@@ -24,6 +26,8 @@ async def lifespan(_: FastAPI):
             "[SAFETY GATE] LIVE_TRADING_ENABLED is hard-locked to False on Phase 0-6. "
             "Real capital execution is prohibited by safety policy."
         )
+    if not settings.jwt_secret_key or not settings.field_encryption_key:
+        raise RuntimeError("JWT_SECRET_KEY and FIELD_ENCRYPTION_KEY must be set (see .env.example).")
 
     tasks = [
         asyncio.create_task(run_binance_ingestion()),
@@ -44,10 +48,13 @@ cors_list = [origin.strip() for origin in settings.cors_origins.split(",") if or
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_list,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.include_router(api_router)
+app.include_router(auth_router)
+app.include_router(admin_router)
 
 
 @app.get("/api/v1/health")

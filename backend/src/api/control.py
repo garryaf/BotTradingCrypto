@@ -1,12 +1,27 @@
 """Operator control actions — shared by the REST API and the Telegram bot
 (ROADMAP.md TASK-5.4) so both surfaces hit exactly the same code path.
+
+Account-scoped equivalents (pause_account/resume_account/account_status) sit
+alongside these for the per-user dashboard — they never affect other users,
+unlike the operator-wide functions above them.
 """
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlmodel import select
 
-from ..models import PortfolioSnapshot, Position, SystemEvent, TradingSignal, UserSetting
-from ..risk.engine import CIRCUIT_BREAKER_KEY, PAUSED_KEY, count_open_positions, get_latest_portfolio, is_paused
+from ..models import SystemEvent, TradingSignal, UserSetting
+from ..risk.engine import (
+    CIRCUIT_BREAKER_KEY,
+    PAUSED_KEY,
+    _account_breaker_key,
+    _account_paused_key,
+    count_all_open_positions,
+    count_open_positions,
+    get_latest_portfolio,
+    is_account_paused,
+    is_paused,
+)
 
 
 async def _set_flag(session, key: str, active: bool) -> None:
@@ -59,10 +74,34 @@ async def resume_trading(session) -> dict:
 
 
 async def system_status(session) -> dict:
-    portfolio = await get_latest_portfolio(session)
-    open_positions = await count_open_positions(session)
+    """Operator-level glance (used by Telegram + the unauthenticated /control/status
+    route) — total open positions across EVERY account. Per-account money figures
+    (equity, cash, drawdown, ...) live on the authenticated /api/v1/portfolio instead."""
+    open_positions = await count_all_open_positions(session)
     paused = await is_paused(session)
     cb_row = (await session.exec(select(UserSetting).where(UserSetting.key == CIRCUIT_BREAKER_KEY))).first()
+    return {
+        "open_positions_count": open_positions,
+        "paused": paused,
+        "circuit_breaker_active": bool(cb_row and cb_row.value == "true"),
+    }
+
+
+async def pause_account(session, user_id: UUID) -> dict:
+    await _set_flag(session, _account_paused_key(user_id), True)
+    return {"paused": True}
+
+
+async def resume_account(session, user_id: UUID) -> dict:
+    await _set_flag(session, _account_paused_key(user_id), False)
+    await _set_flag(session, _account_breaker_key(user_id), False)
+    return {"paused": False, "circuit_breaker_active": False}
+
+
+async def account_status(session, user_id: UUID) -> dict:
+    portfolio = await get_latest_portfolio(session, user_id)
+    open_positions = await count_open_positions(session, user_id)
+    cb_row = (await session.exec(select(UserSetting).where(UserSetting.key == _account_breaker_key(user_id)))).first()
     return {
         "equity_usd": portfolio.total_equity_usd,
         "cash_balance_usd": portfolio.cash_balance_usd,
@@ -72,6 +111,6 @@ async def system_status(session) -> dict:
         "daily_loss_pct": portfolio.daily_loss_pct,
         "current_drawdown_pct": portfolio.current_drawdown_pct,
         "high_water_mark_usd": portfolio.high_water_mark_usd,
-        "paused": paused,
+        "paused": await is_account_paused(session, user_id),
         "circuit_breaker_active": bool(cb_row and cb_row.value == "true"),
     }

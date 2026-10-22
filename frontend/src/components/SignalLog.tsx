@@ -51,14 +51,25 @@ export function SignalLog() {
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Log Audit Sinyal AI</h2>
       <div className="space-y-1.5">
         <AnimatePresence initial={false}>
-          {rows.map((s) => (
+          {rows.map((s, i) => (
             <motion.div
               key={s.generated_at}
               layout
               initial={{ opacity: 0, y: -10, backgroundColor: "rgba(255,255,255,0.08)" }}
-              animate={{ opacity: 1, y: 0, backgroundColor: "rgba(255,255,255,0)" }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
-              transition={{ duration: 0.4 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                backgroundColor: "rgba(255,255,255,0)",
+                transition: { duration: 0.4, delay: Math.min(i, 8) * 0.04 },
+              }}
+              exit={{
+                opacity: 0,
+                height: 0,
+                marginBottom: 0,
+                paddingTop: 0,
+                paddingBottom: 0,
+                transition: { duration: 0.22 },
+              }}
               className="overflow-hidden rounded-md border border-border-soft px-3 py-2 text-xs"
             >
               <div className="flex items-center justify-between">

@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
+/* Bloomberg Terminal–style theme: black background, amber/cyan phosphor
+   accents, hairline borders, monospace everywhere, zero radius. */
 :root {
-  --bg: #07090c;
-  --bg-panel: #0d1016;
-  --bg-panel-raised: #11141b;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-soft: rgba(255, 255, 255, 0.045);
-  --text: #e8eaed;
-  --text-muted: #7b828f;
-  --text-faint: #4d535e;
-  --profit: #3ddc84;
-  --loss: #ff5c5c;
-  --warn: #ffb84d;
-  --brand: #5b8cff;
+  --bg: #000000;
+  --bg-panel: #000000;
+  --bg-panel-raised: #0b0b0b;
+  --border: rgba(255, 178, 36, 0.22);
+  --border-soft: rgba(255, 255, 255, 0.12);
+  --text: #ffb400;
+  --text-muted: #8a8a8a;
+  --text-faint: #4a4a4a;
+  --profit: #00e676;
+  --loss: #ff3b30;
+  --warn: #ffe135;
+  --brand: #00d9ff;
 }
 
 @theme inline {
@@ -28,23 +30,20 @@
   --color-loss: var(--loss);
   --color-warn: var(--warn);
   --color-brand: var(--brand);
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-mono);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(91, 140, 255, 0.08), transparent),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.012) 0px,
-      rgba(255, 255, 255, 0.012) 1px,
-      transparent 1px,
-      transparent 32px
-    );
 }
 
 * {
@@ -79,4 +78,13 @@ body {
 }
 .animate-blink-dot {
   animation: blink-dot 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

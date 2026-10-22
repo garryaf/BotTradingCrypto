@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
-import { PnlGlow } from "./PnlGlow";
 import { CountUp } from "./CountUp";
 
 type PositionRow = {
@@ -50,7 +49,7 @@ export function PositionsTable() {
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Posisi Terbuka</h2>
       <div className="space-y-1.5">
         <AnimatePresence initial={false}>
-          {rows.map((p) => {
+          {rows.map((p, i) => {
             const pnl = (p.unrealized_pnl_usd ?? 0) + p.realized_pnl_usd;
             const positive = pnl >= 0;
             return (
@@ -58,9 +57,16 @@ export function PositionsTable() {
                 key={p.id}
                 layout
                 initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
-                transition={{ duration: 0.3 }}
+                animate={{ opacity: 1, x: 0, transition: { duration: 0.3, delay: Math.min(i, 8) * 0.04 } }}
+                exit={{
+                  opacity: 0,
+                  x: 12,
+                  height: 0,
+                  marginBottom: 0,
+                  paddingTop: 0,
+                  paddingBottom: 0,
+                  transition: { duration: 0.18 },
+                }}
                 className="flex items-center justify-between overflow-hidden rounded-md border border-border-soft px-3 py-2 text-xs"
               >
                 <div className="flex items-center gap-2">
@@ -71,12 +77,10 @@ export function PositionsTable() {
                 <span className="font-mono text-text-muted">
                   {p.quantity.toFixed(6)} @ {p.average_entry_price.toFixed(2)}
                 </span>
-                <PnlGlow positive={positive} intensity="sm">
-                  <span className={`font-mono ${positive ? "text-profit" : "text-loss"}`}>
-                    {positive ? "+" : ""}
-                    <CountUp value={pnl} format={(n) => n.toFixed(2)} />
-                  </span>
-                </PnlGlow>
+                <span className={`font-mono ${positive ? "text-profit" : "text-loss"}`}>
+                  {positive ? "+" : ""}
+                  <CountUp value={pnl} format={(n) => n.toFixed(2)} />
+                </span>
               </motion.div>
             );
           })}

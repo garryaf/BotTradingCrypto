@@ -3,8 +3,8 @@
 import { motion } from "framer-motion";
 import { ReactNode } from "react";
 
-const PROFIT_RGB = "61,220,132"; // --profit
-const LOSS_RGB = "255,92,92"; // --loss
+const PROFIT_RGB = "0,230,118"; // --profit
+const LOSS_RGB = "255,59,48"; // --loss
 
 function glowLayers(rgb: string, scale: number, alpha: number) {
   return [
