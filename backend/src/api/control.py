@@ -53,6 +53,11 @@ async def emergency_stop(session) -> dict:
     )
     await session.commit()
     elapsed_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+    try:
+        from ..control.telegram_bot import notify_operator
+        await notify_operator(f"🛑 [EMERGENCY STOP] /kill engaged — {cancelled} signal(s) cancelled in {round(elapsed_ms, 1)}ms.")
+    except Exception:
+        pass
     return {"engaged": True, "cancelled_signals": cancelled, "elapsed_ms": round(elapsed_ms, 1)}
 
 

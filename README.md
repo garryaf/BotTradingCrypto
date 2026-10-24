@@ -39,11 +39,11 @@ Detail rincian milestone: [docs/00-overview/ROADMAP.md](file:///Users/nabilartan
 
 ### Teknologi
 - **Backend API & Orchestration:** Python 3.12, FastAPI, SQLModel (ORM), Alembic, AsyncPG, Pydantic v2.
-- **Risk Gate Engine (opsional):** Rust, dipanggil backend via HTTP JSON `POST /evaluate` (fail-closed). Default nonaktif (`ENGINE_URL` kosong) — Risk Gate 9 pintu berjalan in-process di Python. Kode `engine/src` belum ada (lihat [RUST_ENGINE_INTEGRATION_SPEC.md](docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md)).
+- **Risk Gate Engine (opsional):** Rust microservice (`engine/src/main.rs`), dipanggil backend via HTTP JSON `POST /evaluate` (fail-closed). Default nonaktif (`ENGINE_URL` kosong) — Risk Gate 9 pintu berjalan in-process di Python. Jika diaktifkan via `--profile engine` + `ENGINE_URL=http://engine:8080`, evaluasi divalidasi oleh Rust Risk Gate Engine.
 - **AI Gateway:** OpenRouter (primer) + 9Route (fallback fail-over), Pydantic structured output.
 - **Database:** PostgreSQL 16 (Alpine Linux).
 - **Frontend Dashboard:** Next.js 15 (App Router), React 19, Tailwind CSS v4, Framer Motion, Lightweight Charts.
-- **Control & Monitoring Bot:** Telegram Bot API (Async HTTPX Long-polling with allowlist security).
+- **Control & Monitoring Bot:** Telegram Bot API (Async HTTPX Long-polling with allowlist security & event push alerts).
 - **Infrastruktur & Orkestrasi:** Docker & Docker Compose, UFW Firewall, Nginx Reverse Proxy.
 
 ### Matriks Port & Endpoint
@@ -63,19 +63,19 @@ Detail rincian milestone: [docs/00-overview/ROADMAP.md](file:///Users/nabilartan
 AUTO-TRADE-AA/
 ├── backend/
 │   ├── src/
-│   │   ├── agents/          # Hermes Multi-Agent: hermes.py, skills.py, schemas.py
+│   │   ├── agents/          # Hermes Multi-Agent, wallet_scorer.py, copy_trade.py, skills.py, schemas.py
 │   │   ├── api/             # FastAPI routes & control actions (/health, /signals, /portfolio)
 │   │   ├── backtest/        # Backtesting engine, walk-forward analysis, data loader
-│   │   ├── control/         # Telegram bot (long-polling, allowlist, /kill switch)
+│   │   ├── control/         # Telegram bot (long-polling, allowlist, push alerts, /kill switch)
 │   │   ├── gateway/         # AI Model Gateway (OpenRouter + 9Route fallback)
-│   │   ├── ingestion/       # Binance Spot & Solana RPC ingestion pipelines
-│   │   ├── risk/            # Risk Gate (9 pintu), broker simulator, ledger, engine_client (IPC ke Rust)
+│   │   ├── ingestion/       # Binance Spot & Solana RPC pipelines, aggregator OHLCV, heuristics
+│   │   ├── risk/            # Risk Gate (9 pintu), broker simulator, ledger, burner_guard, engine_client (IPC ke Rust)
 │   │   ├── models.py        # SQLModel ORM (21 entitas tabel terelasi)
 │   │   ├── config.py        # Pydantic Settings (manajemen konfigurasi terpusat)
 │   │   └── main.py          # FastAPI application entry point
 │   ├── alembic/             # Database migrations (alembic.ini + versions/)
 │   └── Dockerfile           # Docker container backend
-├── engine/                  # Rust Risk Gate engine (opt-in, Dockerfile siap; engine/src belum ada)
+├── engine/                  # Rust Risk Gate engine (engine/src/main.rs, Cargo.toml, Dockerfile)
 ├── frontend/
 │   ├── src/
 │   │   ├── app/             # Next.js App Router (Dashboard, History, Settings)
@@ -83,6 +83,7 @@ AUTO-TRADE-AA/
 │   │   └── lib/             # API polling hooks & WebSocket subscribers
 │   ├── Dockerfile           # Multi-stage production container Next.js
 │   └── package.json
+├── scripts/                 # ram_soak_monitor.py (soak test RAM), drill_db_restore.sh (disaster recovery)
 ├── docs/                    # Dokumentasi lengkap sistem (15 domain lengkap)
 ├── .agents/                 # Aturan & skills AI agent (Ponytail rules)
 ├── .env.example             # Template konfigurasi variabel lingkungan
@@ -163,8 +164,8 @@ docker compose up -d --build
 > cd frontend && npm install && npm run dev
 > ```
 
-> 🦀 **Opsional — Rust Risk Gate Engine:** service `engine` hanya jalan bila diminta eksplisit.
-> Aktifkan **hanya setelah `engine/src` tersedia**, karena backend akan menolak *semua* sinyal (fail-closed) jika engine tidak bisa dihubungi:
+> 🦀 **Opsional — Rust Risk Gate Engine:** service `engine` (`engine/src/main.rs`) berjalan pada port 8080.
+> Jika Anda mengaktifkannya, backend akan mendelegasikan verifikasi sinyal secara fail-closed:
 > ```bash
 > # di .env: ENGINE_URL=http://engine:8080
 > docker compose --profile engine up -d --build
@@ -197,18 +198,33 @@ Dashboard interaktif akan langsung menampilkan portofolio virtual, status maskot
 ---
 
 ### Step 5: Eksekusi Test Suite & Backtest
-Pastikan semua komponen lulus validasi unit & integrasi:
+Pastikan semua komponen lulus validasi unit, integrasi, dan risk guard:
 
-Test berupa self-check plain-assert (tanpa pytest, tanpa DB, tanpa API key asli):
+Test berupa self-check plain-assert (tanpa pytest eksternal, tanpa DB live, tanpa API key asli):
 ```bash
-# 1. Self-check unit (masing-masing mencetak "ok" bila lulus)
-docker compose exec backend python -m src.risk.test_gate            # 9 pintu Risk Gate
+# 1. Self-check unit & integrasi Backend Python (mencetak "ok" bila lulus)
+docker compose exec backend python -m src.risk.test_gate            # 9 pintu Risk Gate Python
 docker compose exec backend python -m src.risk.test_broker          # Paper Broker & akuntansi
 docker compose exec backend python -m src.risk.test_engine_client   # IPC Rust engine fail-closed
+docker compose exec backend python -m src.risk.test_ledger          # Compounding & High-Water Mark
+docker compose exec backend python -m src.risk.test_burner_guard    # Paper mode lock & burner safety
 docker compose exec backend python -m src.agents.test_hermes        # AI Gateway fallback & skema
-docker compose exec backend python -m src.backtest.test_backtest    # anti look-ahead bias
+docker compose exec backend python -m src.agents.test_wallet_scorer # Kalkulasi ranking & skor wallet
+docker compose exec backend python -m src.agents.test_copy_trade    # Copy-trading trigger & risk-check
+docker compose exec backend python -m src.ingestion.test_aggregator # OHLCV aggregator & DLQ
+docker compose exec backend python -m src.ingestion.test_heuristics # Heuristik on-chain & backoff 429
+docker compose exec backend python -m src.ingestion.test_binance    # Binance Spot parsing & stale DLQ
+docker compose exec backend python -m src.control.test_telegram_bot # Telegram bot & emergency alerts
+docker compose exec backend python -m src.backtest.test_backtest    # Anti look-ahead bias
 
-# 2. Jalankan engine backtesting simulasi data historis BTCUSDT
+# 2. Rust Engine Unit Tests
+cd engine && cargo test
+
+# 3. Operasional: RAM Soak Monitor & DB Restore Drill
+python scripts/ram_soak_monitor.py --duration 10
+bash scripts/drill_db_restore.sh
+
+# 4. Jalankan engine backtesting simulasi data historis BTCUSDT
 docker compose exec backend python -m src.backtest.engine
 ```
 
@@ -377,7 +393,7 @@ docker compose -f docker-compose.prod.yml ps
 ```
 Semua container (`postgres`, `backend`, `frontend`) harus berstatus `Up (healthy)` atau `Up`.
 
-Rust Risk Gate engine bersifat opt-in di produksi juga: tambahkan `ENGINE_URL=http://engine:8080` ke `.env` lalu jalankan dengan `docker compose -f docker-compose.prod.yml --profile engine up -d --build`. Jangan aktifkan sebelum `engine/src` ada — backend fail-closed dan membekukan trading jika engine tak terjangkau.
+Rust Risk Gate engine bersifat opt-in di produksi juga: tambahkan `ENGINE_URL=http://engine:8080` ke `.env` lalu jalankan dengan `docker compose -f docker-compose.prod.yml --profile engine up -d --build`. Backend beroperasi fail-closed: jika engine diaktifkan namun tidak merespons, evaluasi sinyal akan ditolak demi keamanan aset.
 
 ---
 

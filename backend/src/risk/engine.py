@@ -142,6 +142,11 @@ async def _set_account_circuit_breaker(session, user_id: UUID, active: bool, rea
                 message=f"[user {user_id}] {reason}",
             )
         )
+        try:
+            from ..control.telegram_bot import notify_operator
+            await notify_operator(f"🚨 [CIRCUIT BREAKER TRIGGERED]\nUser: {user_id}\nReason: {reason}")
+        except Exception:
+            pass
     await session.commit()
 
 

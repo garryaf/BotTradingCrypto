@@ -28,13 +28,24 @@ SOL_MINT = "So11111111111111111111111111111111111111112"
 DEX_PROGRAM_HINTS = {"Raydium": "RAYDIUM", "Orca": "ORCA", "Jupiter": "JUPITER"}
 
 
-async def _rpc(client: httpx.AsyncClient, method: str, params: list) -> dict:
-    res = await client.post(settings.solana_rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+async def _rpc(client: httpx.AsyncClient, method: str, params: list, max_retries: int = 3, initial_delay: float = 0.05) -> dict:
+    delay = initial_delay
+    for attempt in range(max_retries):
+        res = await client.post(settings.solana_rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+        if res.status_code == 429 and attempt < max_retries - 1:
+            retry_after = res.headers.get("Retry-After")
+            wait_time = float(retry_after) if retry_after and retry_after.isdigit() else delay
+            logger.warning("Solana RPC 429 rate limited, backing off %.2fs (attempt %d/%d)", wait_time, attempt + 1, max_retries)
+            await asyncio.sleep(wait_time)
+            delay *= 2
+            continue
+        res.raise_for_status()
+        body = res.json()
+        if "error" in body:
+            raise RuntimeError(body["error"])
+        return body["result"]
     res.raise_for_status()
-    body = res.json()
-    if "error" in body:
-        raise RuntimeError(body["error"])
-    return body["result"]
+    return res.json()["result"]
 
 
 async def _get_or_create_token(session: AsyncSession, mint: str, decimals: int = 9) -> Token:
@@ -117,6 +128,20 @@ async def _normalize(session: AsyncSession, wallet: Wallet, sig: str, tx: dict) 
     except IntegrityError:
         await session.rollback()
         await log_dlq(session, "SOLANA_RPC", "DUPLICATE_SIGNATURE", sig, {"wallet": wallet.address})
+        return
+
+    # Trigger copy-trading if wallet is actively approved/monitored (BR-01, COPY_TRADING_FLOWCHART.mmd)
+    if wallet.status in ("APPROVED", "ACTIVE_MONITORED") and action in ("BUY", "SELL"):
+        target_token = token_out if action == "BUY" else token_in
+        if target_token:
+            price_usd = Decimal("100.00")
+            if amount_in > 0 and amount_out > 0:
+                price_usd = (amount_in / amount_out) if action == "BUY" else (amount_out / amount_in)
+            try:
+                from ..agents.copy_trade import create_copy_trade_signal
+                await create_copy_trade_signal(session, wallet, target_token, action, price_usd)
+            except Exception as exc:
+                logger.warning("Copy-trade signal creation failed: %s", exc)
 
 
 async def _poll_wallet(client: httpx.AsyncClient, session: AsyncSession, wallet: Wallet) -> None:

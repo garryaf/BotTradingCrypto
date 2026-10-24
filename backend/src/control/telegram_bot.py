@@ -23,7 +23,26 @@ def _is_configured() -> bool:
 
 
 async def _send_message(client: httpx.AsyncClient, chat_id: str, text: str) -> None:
-    await client.post(f"{API_BASE}/bot{settings.telegram_bot_token}/sendMessage", json={"chat_id": chat_id, "text": text})
+    res = await client.post(f"{API_BASE}/bot{settings.telegram_bot_token}/sendMessage", json={"chat_id": chat_id, "text": text})
+    res.raise_for_status()
+
+
+async def notify_operator(text: str, client: httpx.AsyncClient | None = None) -> bool:
+    """Sends a critical push alert to settings.telegram_allowed_chat_id (FR-TG-01, AC-CTL-03).
+    Fails safely and never raises into the caller loop."""
+    if not _is_configured() or not settings.telegram_allowed_chat_id:
+        return False
+    owns_client = client is None
+    c = client or httpx.AsyncClient(timeout=5.0)
+    try:
+        await _send_message(c, settings.telegram_allowed_chat_id, text)
+        return True
+    except Exception as exc:
+        logger.warning("Failed to send Telegram alert: %s", exc)
+        return False
+    finally:
+        if owns_client:
+            await c.aclose()
 
 
 def _format_status(s: dict) -> str:

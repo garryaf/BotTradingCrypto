@@ -20,7 +20,9 @@ from .risk.engine import run_risk_engine_loop
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Enforce Layer 2 & 3 Safety Gate (Hardcoded Live Lock)
+    # Enforce Layer 2 & 3 Safety Gate (Hardcoded Live Lock per LIVE_TRADING_SAFETY_GATE.md)
+    from .risk.burner_guard import assert_paper_mode
+    assert_paper_mode()
     if settings.live_trading_enabled is not False:
         raise RuntimeError(
             "[SAFETY GATE] LIVE_TRADING_ENABLED is hard-locked to False on Phase 0-6. "
