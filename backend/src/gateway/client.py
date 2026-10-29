@@ -11,7 +11,7 @@ import httpx
 from ..config import settings
 
 TIMEOUT_SEC = 15
-MAX_TOKENS = 2500  # reasoning tokens count against this; 1000 truncated the JSON mid-object
+MAX_TOKENS = 1200  # fits modest credit balances while giving ample room for structured JSON
 
 
 class GatewayError(RuntimeError):

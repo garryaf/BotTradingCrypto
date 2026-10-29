@@ -1,0 +1,23 @@
+page_route,component,element,handler,api_call_or_action,backend_dependency,auth_required,test_status
+/ (any page),middleware.ts,(navigation guard),middleware,redirect to /login without cookie,none,cookie,PLAYWRIGHT_VERIFIED
+/,page.tsx,timeframe buttons,setTimeframe,local state -> CandleChart reseed,Binance public REST/WS,cookie,NOT_TESTED
+/,TickerStrip.tsx,symbol buttons,onSelect,local state -> symbol,Binance public WS,cookie,NOT_TESTED
+/,EquityHero.tsx,(auto),usePolling,GET /api/v1/portfolio (5s),portfolio_snapshots,user,PLAYWRIGHT_VERIFIED (mocked render)
+/,PositionsTable.tsx,(auto),usePolling,GET /api/v1/positions (5s),positions,user,PLAYWRIGHT_VERIFIED (mocked render)
+/,SignalLog.tsx,(auto),usePolling,GET /api/v1/signals (5s),trading_signals,user,PLAYWRIGHT_VERIFIED (empty state)
+/,CandleChart.tsx,(auto),fetchKlines+subscribeKline,Binance data-api/data-stream,external,none(public),NOT_TESTED (stubbed in e2e)
+/ (header),KillSwitch.tsx,EMERGENCY STOP (hold 1200ms),startHold->apiPost,POST /api/v1/control/kill,control.emergency_stop,admin,PLAYWRIGHT_VERIFIED (failure shows alert; success shows engaged) - F-22
+/ (header),KillSwitch.tsx,LIVE LOCK ENGAGED (click),onClick->apiPost,POST /api/v1/control/resume,control.resume_trading,admin,NOT_TESTED (UI); API verified
+/ (header),AppHeader.tsx,Logout,logout()+router.push,POST /api/v1/auth/logout,cookie delete,user,NOT_TESTED
+/login,login/page.tsx,login form submit,login(),POST /api/v1/auth/login,users,none,PLAYWRIGHT_VERIFIED (error + success redirect)
+/register,register/page.tsx,register form submit,register(),POST /api/v1/auth/register,users,none,NOT_TESTED (UI); API verified
+/settings,settings/page.tsx,credentials form submit,saveBinanceCredentials(),PUT /api/v1/auth/binance-credentials,binance_credentials(Fernet),user,NOT_TESTED (UI); API verified
+/settings,settings/page.tsx,(on mount),getBinanceCredentials(),GET /api/v1/auth/binance-credentials,binance_credentials,user,PLAYWRIGHT_VERIFIED (load failure shows alert) - F-22
+/risk,RiskGatePanel.tsx,(auto),usePolling,GET /api/v1/risk/status (5s),risk_checks + limits,user,PLAYWRIGHT_VERIFIED (labels from limits; rejection reasons) - F-23
+/wallets,WalletExplorer.tsx,(auto),usePolling,GET /api/v1/wallets (10s; refetch after a decision),wallets,user,PLAYWRIGHT_VERIFIED (table + empty state)
+/wallets,WalletExplorer.tsx,Tambah kandidat (form),addWallet(),POST /api/v1/admin/wallets,wallets,admin,PLAYWRIGHT_VERIFIED (409 alert; 201 -> row appears)
+/wallets,WalletExplorer.tsx,Setujui (PENDING_REVIEW rows),decideWallet(),PATCH /api/v1/admin/wallets/{address} ACTIVE_MONITORED,wallets,admin,PLAYWRIGHT_VERIFIED (sends status; row refreshes; hidden for non-admin)
+/wallets,WalletExplorer.tsx,Arsipkan,decideWallet(),PATCH /api/v1/admin/wallets/{address} ARCHIVED,wallets,admin,NOT_TESTED (UI); API verified
+/admin,admin/page.tsx,toggle role,updateUser(),PATCH /api/v1/admin/users/{id},users,admin,NOT_TESTED
+/admin,admin/page.tsx,toggle active,updateUser(),PATCH /api/v1/admin/users/{id},users,admin,NOT_TESTED
+/admin,admin/page.tsx,(on mount),listUsers(),GET /api/v1/admin/users,users,admin (server-enforced),NOT_TESTED (UI); API verified

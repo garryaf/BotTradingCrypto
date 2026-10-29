@@ -1,0 +1,26 @@
+method,path,router,auth,request_body,reads_writes,notes,test_status
+GET,/api/v1/health,main.py,none,-,SELECT 1 + background task states,status ok|degraded; tasks running/exited/crashed/cancelled (GAP-14),HTTP_VERIFIED (test_http) + UNIT (test_main)
+GET,/api/v1/portfolio,routes.py,user,-,read portfolio_snapshots (seeds if none),returns equity/pnl/history,HTTP_VERIFIED (test_http) + PLAYWRIGHT (mocked render)
+GET,/api/v1/positions,routes.py,user,-,read positions (<=50),user-scoped,HTTP_VERIFIED (test_http) + PLAYWRIGHT
+GET,/api/v1/signals,routes.py,user,-,read trading_signals (<=30 shared),F-03 fixed: auth required (signals have no user_id),HTTP_VERIFIED (test_http) + PLAYWRIGHT (empty state)
+GET,/api/v1/wallets,routes.py,user,-,read wallets (<=50 by score),F-09: scored copy-trade candidates,HTTP_VERIFIED (test_http) + PLAYWRIGHT
+GET,/api/v1/risk/status,routes.py,user,-,read risk_checks + account_status + limits,limits = enforced thresholds (F-23),HTTP_VERIFIED (test_http) + PLAYWRIGHT
+POST,/api/v1/control/kill,routes.py,admin,-,set flags + reject PENDING + event + telegram,global; elapsed_ms < 2000 asserted,HTTP_VERIFIED (test_http) + PLAYWRIGHT (failure/success UI)
+POST,/api/v1/control/pause,routes.py,admin,-,set PAUSED flag,global,NOT_TESTED (HTTP)
+POST,/api/v1/control/resume,routes.py,admin,-,clear PAUSED+breaker,global,HTTP_VERIFIED (test_http)
+GET,/api/v1/control/status,routes.py,admin,-,count_all_open_positions,used by Telegram /status (formatter checked against it),NOT_TESTED (HTTP); function checked in test_http
+POST,/api/v1/control/account/pause,routes.py,user,-,set ACCOUNT_PAUSED:{uid},per-account,NOT_TESTED
+POST,/api/v1/control/account/resume,routes.py,user,-,clear account paused+breaker,per-account,NOT_TESTED
+GET,/api/v1/control/account/status,routes.py,user,-,account_status,per-account (same function as risk/status),NOT_TESTED (HTTP); function covered via /risk/status
+GET,/api/v1/backtest/run,routes.py,user,query symbol/days(1-365)/interval,outbound fetch + run_backtest,F-03 fixed,HTTP_VERIFIED for auth+bounds (fetch itself not called in tests) + UNIT (test_backtest)
+POST,/api/v1/auth/register,auth_routes.py,none,Registration{email(shape),password(8..72 bytes)},write users,first user=admin,HTTP_VERIFIED (409 dup + 422 bad email/short/73-byte)
+POST,/api/v1/auth/login,auth_routes.py,none,Credentials{email,password(1..72 bytes)},read users,sets cookie (Secure outside dev),HTTP_VERIFIED (401 wrong pw + 200 + 422 73-byte) + PLAYWRIGHT (error/success UI)
+POST,/api/v1/auth/logout,auth_routes.py,none,-,delete cookie,-,NOT_TESTED
+GET,/api/v1/auth/me,auth_routes.py,user,-,-,returns email/role,HTTP_VERIFIED (test_http)
+GET,/api/v1/auth/binance-credentials,auth_routes.py,user,-,read+decrypt last4,-,HTTP_VERIFIED (test_http) + PLAYWRIGHT (load-failure UI)
+PUT,/api/v1/auth/binance-credentials,auth_routes.py,user,BinanceCredentialsIn,encrypt+upsert,Fernet,HTTP_VERIFIED (test_http)
+GET,/api/v1/admin/users,admin_routes.py,admin,-,read users,-,HTTP_VERIFIED (test_http)
+PATCH,/api/v1/admin/users/{user_id},admin_routes.py,admin,UserPatch{role?,is_active?},update users,self-demote guard,NOT_TESTED
+GET,/api/v1/admin/metrics,admin_routes.py,admin,-,24h aggregates (llm/agent_runs/signals/risk_checks/ingestion_errors/critical events),GAP-14,HTTP_VERIFIED (401 anon + aggregates incl cost_usd)
+POST,/api/v1/admin/wallets,admin_routes.py,admin,WalletIn{address(base58 32-44)},insert wallets (DISCOVERED),P1-1 candidate intake; 409 duplicate (IntegrityError),HTTP_VERIFIED (test_copy_trade_chain: 201 + 409 + 422) + PLAYWRIGHT (409 error UI + 201 refresh)
+PATCH,/api/v1/admin/wallets/{address},admin_routes.py,admin,WalletDecision{status: ACTIVE_MONITORED|ARCHIVED},update wallets + system_events,P1-1 manual approval; approve only from PENDING_REVIEW (409),HTTP_VERIFIED (test_copy_trade_chain: 409 before scoring + 200 approve + 200 archive) + PLAYWRIGHT (approve UI)

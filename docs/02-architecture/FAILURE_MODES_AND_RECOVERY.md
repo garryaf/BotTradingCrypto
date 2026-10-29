@@ -47,7 +47,7 @@ Jika sistem mengalami crash atau restart mendadak di tengah pemrosesan:
 
 Prosedur penanganan pemicu Circuit Breaker, verifikasi keselamatan pra-resume, alur state machine, dan runbook pemulihan manual operator didokumentasikan secara rinci pada dokumen terdedikasi:
 
-👉 **[CIRCUIT_BREAKER_OPERATIONAL_SOP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)**
+👉 **[CIRCUIT_BREAKER_OPERATIONAL_SOP.md](../../docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)**
 
 ### Ringkasan Cepat Prosedur Pemulihan Operator:
 1. **Periksa Status Sistem:** Kirim perintah `/status` via Telegram atau panggil `GET /control/status`.

@@ -9,6 +9,8 @@
 
 **AUTO-TRADE-AA** adalah platform perdagangan aset kripto cerdas berbasis agen AI (*Hermes Multi-Agent Orchestrator*) yang memadukan model inferensi probabilistik dengan mesin risiko deterministik (*Deterministic Risk Engine*). Sistem dirancang dengan filosofi **Safety-by-Design**: AI hanya bertugas menganalisis data pasar dan menyintesis sinyal rekomendasi, sedangkan kode logika deterministik memegang kendali penuh atas evaluasi risiko, kalkulasi ukuran posisi, dan eksekusi pesanan virtual (*Paper Trading*).
 
+> **Implementasi saat ini:** Hermes adalah satu orchestrator yang menjalankan tiga skill LLM berurutan (rezim pasar → keamanan token → sintesis sinyal). Manajemen risiko dan eksekusi adalah kode deterministik, bukan agen LLM. Pemetaan lengkap peran → kode: [docs/02-architecture/AI_AGENT_ARCHITECTURE.md §0](docs/02-architecture/AI_AGENT_ARCHITECTURE.md).
+
 ### Pilar Keselamatan & Arsitektur Utama:
 1. **Hybrid Market Engine:** Mengintegrasikan likuiditas institusional tersentralisasi (*Binance Spot REST & WebSocket*) dan peluang token on-chain desentralisasi (*Solana Raydium, Orca, Jupiter*).
 2. **Deterministic Risk Gate (9 Pintu):** Evaluasi serial berurutan yang mutlak dipenuhi sebelum sinyal dieksekusi (Risk $\le 0.5\%$ per trade, Daily Loss limit $2\%$, Drawdown limit $8\%$, Positive Expectancy, Freshness Check $\le 30$ detik, Volatility/Spread check).
@@ -31,7 +33,7 @@
 | **Fase 6** | Engine Backtesting Historis & Paper Trading Soak Test (30 Hari Stabilitas) | 🟡 *Tahap Uji Stabilitas* |
 | **Fase 7** | Live Trading Safety Gate (Kondisional: Burner Wallet & Multi-Step Approval) | 🔒 *Terkunci Struktural* |
 
-Detail rincian milestone: [docs/00-overview/ROADMAP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/00-overview/ROADMAP.md)
+Detail rincian milestone: [docs/00-overview/ROADMAP.md](docs/00-overview/ROADMAP.md)
 
 ---
 
@@ -70,7 +72,7 @@ AUTO-TRADE-AA/
 │   │   ├── gateway/         # AI Model Gateway (OpenRouter + 9Route fallback)
 │   │   ├── ingestion/       # Binance Spot & Solana RPC pipelines, aggregator OHLCV, heuristics
 │   │   ├── risk/            # Risk Gate (9 pintu), broker simulator, ledger, burner_guard, engine_client (IPC ke Rust)
-│   │   ├── models.py        # SQLModel ORM (21 entitas tabel terelasi)
+│   │   ├── models.py        # SQLModel ORM (20 tabel domain; + alembic_version = 21 tabel di DB)
 │   │   ├── config.py        # Pydantic Settings (manajemen konfigurasi terpusat)
 │   │   └── main.py          # FastAPI application entry point
 │   ├── alembic/             # Database migrations (alembic.ini + versions/)
@@ -173,16 +175,20 @@ docker compose up -d --build
 
 Sistem akan otomatis:
 1. Menyalakan PostgreSQL dan menunggu inisialisasi sampai status *healthy*.
-2. Menjalankan migrasi database via Alembic (`alembic upgrade head`) untuk membuat 21 tabel.
+2. Menjalankan migrasi database via Alembic (`alembic upgrade head`) untuk membuat 20 tabel domain (+ `alembic_version`).
 3. Menjalankan server FastAPI pada port `8000`.
 4. Menjalankan dashboard web Next.js 15 pada port `3000`.
 
 **Verifikasi status backend:**
 ```bash
 curl http://localhost:8000/api/v1/health
-# Output yang diharapkan:
-# {"status":"ok","db":"connected","env":"development","live_trading":false}
+# Output yang diharapkan (dipersingkat):
+# {"status":"ok","db":"connected","env":"development","live_trading":false,
+#  "tasks":{"binance_ingestion":"running","risk_engine":"running","hermes":"exited",...}}
 ```
+`tasks` = status tiap loop background: `running`, `exited` (berhenti sendiri karena belum dikonfigurasi, mis. Hermes tanpa API key atau Telegram tanpa token), `crashed`, `cancelled`. `status` menjadi `"degraded"` bila DB terputus atau ada loop `crashed` (traceback-nya tercatat di log backend).
+
+**Metrik 24 jam (admin):** setelah login sebagai admin di dashboard, buka `http://localhost:8000/api/v1/admin/metrics` — jumlah panggilan LLM, error, token, biaya (`cost_usd` dari OpenRouter), latensi rata-rata, status sinyal, risk check lolos/ditolak, error ingestion, dan event kritis.
 
 **Melihat log realtime:**
 ```bash
@@ -194,6 +200,14 @@ docker compose logs -f backend
 ### Step 4: Akses Dashboard Web
 Buka peramban (browser) di: **`http://localhost:3000`**
 Dashboard interaktif akan langsung menampilkan portofolio virtual, status maskot Bull/Bear, sinyal trading aktif, dan kontrol darurat.
+
+**Copy-trade (admin, menu Wallet Explorer):**
+1. Masukkan alamat wallet Solana kandidat → status `DISCOVERED`.
+2. Backend mengambil riwayat swap-nya (10 transaksi terbaru per polling, lalu setiap swap baru); loop scoring (tiap 5 menit) mempromosikan wallet dengan skor ≥ 70 ke `PENDING_REVIEW`.
+3. Klik **Setujui** → `ACTIVE_MONITORED` (atau **Arsipkan** → `ARCHIVED`, berhenti dipantau). Persetujuan hanya bisa dari `PENDING_REVIEW`.
+4. Setiap swap **BUY** baru (≤ 30 detik) dari wallet yang disetujui diperiksa: mint & freeze authority token harus sudah dicabut (dibaca dari akun mint on-chain) dan likuiditas pool ≥ $20.000 (DEXScreener). Bila lolos, dibuat sinyal `PENDING` dengan harga USD dari DEXScreener. Swap **SELL** tidak disalin.
+
+> ⚠️ Saat ini Risk Gate **menolak semua sinyal copy-trade token SPL** (`SPREAD_OR_LIQUIDITY_INADEQUATE`): pool DEX tidak punya data bid/ask, dan spread yang tidak diketahui sengaja dibuat gagal (fail-closed). Model spread/fee DEX perlu diputuskan sebelum copy-trade bisa membuka posisi paper.
 
 ---
 
@@ -216,15 +230,23 @@ docker compose exec backend python -m src.ingestion.test_heuristics # Heuristik 
 docker compose exec backend python -m src.ingestion.test_binance    # Binance Spot parsing & stale DLQ
 docker compose exec backend python -m src.control.test_telegram_bot # Telegram bot & emergency alerts
 docker compose exec backend python -m src.backtest.test_backtest    # Anti look-ahead bias
+docker compose exec backend python -m src.test_main                 # Status loop background di /health
 
 # 2. Rust Engine Unit Tests
 cd engine && cargo test
 
-# 3. Operasional: RAM Soak Monitor & DB Restore Drill
+# 3. Integrasi: Postgres 16 + Rust engine sekali pakai di jaringan Docker terpisah
+#    (tidak menyentuh stack compose/volume Anda; semua container dihapus di akhir)
+bash scripts/run_integration_tests.sh   # migrasi DB kosong, HTTP API, e2e Risk Engine (engine off/up/down), parity Python↔Rust
+
+# 4. UI end-to-end (Playwright; API & Binance di-mock, tanpa backend). Sekali saja: npx playwright install chromium
+cd frontend && npm run test:e2e
+
+# 5. Operasional: RAM Soak Monitor & DB Restore Drill
 python scripts/ram_soak_monitor.py --duration 10
 bash scripts/drill_db_restore.sh
 
-# 4. Jalankan engine backtesting simulasi data historis BTCUSDT
+# 6. Jalankan engine backtesting simulasi data historis BTCUSDT
 docker compose exec backend python -m src.backtest.engine
 ```
 
@@ -363,7 +385,8 @@ MAX_DRAWDOWN_LIMIT_PCT=0.08       # 8%
 # AI MODEL GATEWAY (OPENROUTER)
 # ==============================================================================
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPENROUTER_DEFAULT_MODEL=anthropic/claude-3.5-sonnet
+# Sama dengan default backend/src/config.py; id lain: https://openrouter.ai/models
+OPENROUTER_DEFAULT_MODEL=anthropic/claude-haiku-5.5
 
 # ==============================================================================
 # TELEGRAM CONTROL BOT (EMERGENCY RUNBOOK)
@@ -496,9 +519,9 @@ Jalankan checklist verifikasi berikut dari luar server:
 |---|---|---|
 | **HTTPS SSL Valid** | Buka `https://trade.domainanda.com` di browser | Tanda gembok aman, sertifikat Let's Encrypt aktif |
 | **API Healthcheck** | `curl -s https://trade.domainanda.com/api/v1/health` | `{"status":"ok","db":"connected"}` |
-| **Circuit Breaker** | Kirim perintah `/status` ke Telegram Bot | Bot membalas ringkasan PnL, equity, dan kill switch state |
+| **Circuit Breaker** | Kirim perintah `/status` ke Telegram Bot | Bot membalas status RUNNING/PAUSED, jumlah posisi terbuka, dan status circuit breaker |
 | **Database Migrations** | `docker compose -f docker-compose.prod.yml exec postgres psql -U autotrade_admin -d autotrade_prod_db -c "\dt"` | Menampilkan minimal 21 tabel |
-| **Fail-Closed Safety** | Cek log backend: `docker compose logs backend \| grep LIVE_TRADING` | `LIVE_TRADING_ENABLED: False (Hard-locked)` |
+| **Fail-Closed Safety** | `curl -s https://trade.domainanda.com/api/v1/health` | `"live_trading":false` dan tidak ada task `crashed` (backend menolak start bila `LIVE_TRADING_ENABLED` bukan false) |
 
 ---
 
@@ -507,13 +530,13 @@ Jalankan checklist verifikasi berikut dari luar server:
 Platform dilengkapi integrasi bot kontrol berkecepatan tinggi ($\le 2.0$ detik) untuk kondisi darurat:
 
 ### Perintah Utama Telegram Bot:
-- `/status` — Menampilkan saldo portofolio, status pasar, drawdowns saat ini, dan mode trading.
+- `/status` — Ringkasan operator: RUNNING/PAUSED, jumlah posisi terbuka (semua akun), dan status circuit breaker. Equity/PnL per akun ada di dashboard.
 - `/positions` — Menampilkan posisi terbuka beserta kalkulasi floating PnL realtime.
-- `/kill` — **EMERGENCY STOP (SOP-01):** Membatalkan seluruh order tertunda, melikuidasi posisi aktif (jika mode pasar kritis), dan membekukan seluruh pembuatan order baru seketika.
+- `/kill` — **EMERGENCY STOP (SOP-01):** Menolak seluruh sinyal `PENDING` dan membekukan pembuatan order baru seketika (pause + circuit breaker global). Posisi yang sudah terbuka **tidak** dilikuidasi; stop-loss/take-profit-nya tetap dipantau.
 - `/resume` — Memulihkan operasional sistem setelah investigasi insiden selesai dan persetujuan diberikan.
 
-Panduan operasional lengkap: [`docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md)  
-SOP Circuit Breaker: [`docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)
+Panduan operasional lengkap: [`docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md`](docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md)  
+SOP Circuit Breaker: [`docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md`](docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)
 
 ---
 
@@ -536,26 +559,26 @@ Sistem didukung oleh dokumentasi teknis komprehensif yang telah diaudit memenuhi
 
 | No | Domain Dokumentasi | Dokumen Utama |
 |---|---|---|
-| **01** | Gambaran & Roadmap | [docs/00-overview/ROADMAP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/00-overview/ROADMAP.md) |
-| **02** | Kebutuhan Fungsional (BR/FR) | [docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md) |
-| **03** | Kriteria Penerimaan (AC) | [docs/01-requirements/ACCEPTANCE_CRITERIA.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/ACCEPTANCE_CRITERIA.md) |
-| **04** | Metodologi & Rencana Pengujian | [docs/01-requirements/TESTING_PLAN.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/TESTING_PLAN.md) |
-| **05** | Spesifikasi UI/UX (Maskot & Dashboard) | [docs/01-requirements/UI_UX_SPECIFICATION.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/UI_UX_SPECIFICATION.md) |
-| **06** | Arsitektur Sistem & ADR | [docs/02-architecture/ARCHITECTURE_OVERVIEW.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/ARCHITECTURE_OVERVIEW.md) |
-| **07** | Spesifikasi Rust Trading Engine | [docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md) |
-| **08** | Penanganan Kegagalan & Recovery | [docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md) |
-| **09** | Kamus Data (21 Tabel) | [docs/04-data/DATA_DICTIONARY.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/04-data/DATA_DICTIONARY.md) |
-| **10** | Diagram ERD Sistem | [docs/03-diagrams/ERD.mmd](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/03-diagrams/ERD.mmd) |
-| **11** | Kontrol & Standar Keamanan | [docs/05-security/SECURITY_CONTROLS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/SECURITY_CONTROLS.md) |
-| **12** | SOP Circuit Breaker & Recovery | [docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md) |
-| **13** | Runbook Operasional Telegram Bot | [docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md) |
-| **14** | Live Trading Safety Gate (Fase 7) | [docs/05-security/LIVE_TRADING_SAFETY_GATE.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/LIVE_TRADING_SAFETY_GATE.md) |
-| **15** | Matriks Ketertelusuran (RTM) | [docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md) |
+| **01** | Gambaran & Roadmap | [docs/00-overview/ROADMAP.md](docs/00-overview/ROADMAP.md) |
+| **02** | Kebutuhan Fungsional (BR/FR) | [docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md](docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md) |
+| **03** | Kriteria Penerimaan (AC) | [docs/01-requirements/ACCEPTANCE_CRITERIA.md](docs/01-requirements/ACCEPTANCE_CRITERIA.md) |
+| **04** | Metodologi & Rencana Pengujian | [docs/01-requirements/TESTING_PLAN.md](docs/01-requirements/TESTING_PLAN.md) |
+| **05** | Spesifikasi UI/UX (Maskot & Dashboard) | [docs/01-requirements/UI_UX_SPECIFICATION.md](docs/01-requirements/UI_UX_SPECIFICATION.md) |
+| **06** | Arsitektur Sistem & ADR | [docs/02-architecture/ARCHITECTURE_OVERVIEW.md](docs/02-architecture/ARCHITECTURE_OVERVIEW.md) |
+| **07** | Spesifikasi Rust Trading Engine | [docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md](docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md) |
+| **08** | Penanganan Kegagalan & Recovery | [docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md](docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md) |
+| **09** | Kamus Data (20 Tabel + alembic_version) | [docs/04-data/DATA_DICTIONARY.md](docs/04-data/DATA_DICTIONARY.md) |
+| **10** | Diagram ERD Sistem | [docs/03-diagrams/ERD.mmd](docs/03-diagrams/ERD.mmd) |
+| **11** | Kontrol & Standar Keamanan | [docs/05-security/SECURITY_CONTROLS.md](docs/05-security/SECURITY_CONTROLS.md) |
+| **12** | SOP Circuit Breaker & Recovery | [docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md](docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md) |
+| **13** | Runbook Operasional Telegram Bot | [docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md](docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md) |
+| **14** | Live Trading Safety Gate (Fase 7) | [docs/05-security/LIVE_TRADING_SAFETY_GATE.md](docs/05-security/LIVE_TRADING_SAFETY_GATE.md) |
+| **15** | Matriks Ketertelusuran (RTM) | [docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md](docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md) |
 
 ---
 
 ## 🔒 Kebijakan Keamanan & Regulasi
 
 - **Tidak Ada Kustodi Private Key:** Platform tidak pernah meminta atau menyimpan private key dompet pengguna. Semua eksekusi didasarkan pada API Key bertanda tangan (*read/trade only*) tanpa izin penarikan (*no-withdrawal permission*).
-- **Hard-Locked Paper Trading:** Parameter `LIVE_TRADING_ENABLED` terkunci pada `false`. Pengalihan ke mode live hanya diizinkan setelah kelulusan formal 5 gerbang keamanan pada [LIVE_TRADING_SAFETY_GATE.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/LIVE_TRADING_SAFETY_GATE.md).
+- **Hard-Locked Paper Trading:** Parameter `LIVE_TRADING_ENABLED` terkunci pada `false`. Pengalihan ke mode live hanya diizinkan setelah kelulusan formal 5 gerbang keamanan pada [LIVE_TRADING_SAFETY_GATE.md](docs/05-security/LIVE_TRADING_SAFETY_GATE.md).
 - **Telegram Authorization Allowlist:** Hanya ID pengguna Telegram yang terdaftar pada variabel lingkungan yang dapat mengeksekusi instruksi kontrol. Pesan dari pengguna tidak dikenal diabaikan tanpa respon.

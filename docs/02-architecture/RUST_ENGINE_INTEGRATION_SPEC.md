@@ -102,6 +102,18 @@ Payload dikirim dari Python FastAPI ke Rust engine untuk evaluasi:
   "suggested_take_profit_2": 161.55,
   "recommended_allocation_pct": 0.005,
   "confidence_score": 0.84,
+  "estimated_winrate_pct": 60.0,
+  "dollar_risk": 51.23,
+  "fee_usd": 0.26,
+  "limits": {
+    "max_risk_per_trade_pct": 0.005,
+    "daily_loss_limit_pct": 2.0,
+    "max_drawdown_limit_pct": 8.0,
+    "max_spread_pct": 0.08,
+    "min_24h_volume_usd": 1000000.0,
+    "max_open_positions": 5,
+    "data_freshness_max_age_sec": 30
+  },
   "snapshot": {
     "price_usd": 152.40,
     "bid_price": 152.38,
@@ -126,10 +138,16 @@ Payload dikirim dari Python FastAPI ke Rust engine untuk evaluasi:
 | Field | Tipe | Deskripsi |
 |---|---|---|
 | `signal_id` | `UUID string` | ID sinyal dari tabel `trading_signals`. |
-| `snapshot.snapshot_age_seconds` | `int` | Usia data snapshot; Gate 9 gagal jika ≥ 30. |
-| `portfolio.open_positions_count` | `int` | Jumlah posisi terbuka; Gate 8b gagal jika ≥ `MAX_OPEN_POSITIONS`. |
-| `portfolio.daily_loss_pct` | `float` | Persentase kerugian hari ini; Gate 3 gagal jika ≥ 2.0. |
-| `portfolio.current_drawdown_pct` | `float` | Drawdown dari HWM; Gate 4 gagal jika ≥ 8.0. |
+| `recommended_allocation_pct` | `float` (fraksi) | `risk_pct_used` hasil sizing Python; Gate 2 gagal jika > `limits.max_risk_per_trade_pct`. |
+| `estimated_winrate_pct`, `dollar_risk`, `fee_usd` | `float` | Masukan Gate 1 (expectancy) — rumus identik `gate.py`: blend reward TP1/TP2 50/50, winrate dari `estimated_winrate_pct`, dikurangi `fee_usd / dollar_risk`. |
+| `limits` | `object` | **Satu-satunya sumber ambang** untuk engine, dibangun `risk_limits()` di `backend/src/risk/engine.py`. Satuan mengikuti field payload: persen untuk spread/loss/drawdown, fraksi untuk risk/trade. Field yang absen memakai default engine (= nilai hari ini). |
+| `snapshot.snapshot_age_seconds` | `int` | Usia data snapshot; Gate 9 gagal jika > `limits.data_freshness_max_age_sec`. |
+| `snapshot.spread_pct`, `snapshot.pool_liquidity_usd` | `float` | Gate 5 gagal jika spread > `limits.max_spread_pct` atau likuiditas (volume 24h) < `limits.min_24h_volume_usd`. |
+| `portfolio.open_positions_count` | `int` | Jumlah posisi terbuka; Gate 8 gagal jika ≥ `limits.max_open_positions`. |
+| `portfolio.daily_loss_pct` | `float` | Persentase kerugian hari ini; Gate 3 gagal jika ≥ `limits.daily_loss_limit_pct`. |
+| `portfolio.current_drawdown_pct` | `float` | Drawdown dari HWM; Gate 4 gagal jika ≥ `limits.max_drawdown_limit_pct`. |
+
+Parity diverifikasi `backend/src/risk/test_parity.py` (11 kasus batas, input identik → verdict identik). Framing HTTP: engine membaca request utuh berdasarkan `Content-Length` (maks. 64 KB, timeout baca 5 detik) — sebelum audit 2026-10-26 engine hanya membaca satu segmen TCP sehingga ±84% request httpx dijawab 400 (`ENGINE_ERROR`, fail-closed).
 
 ### 4.2 Response: `RiskEvaluationResult`
 
@@ -171,7 +189,7 @@ Payload dikirim dari Python FastAPI ke Rust engine untuk evaluasi:
 |---|---|
 | HTTP timeout > `ENGINE_TIMEOUT_MS` (10ms) | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_TIMEOUT"]`. |
 | HTTP error (4xx/5xx) dari engine | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_ERROR"]`. |
-| Engine container tidak tersedia (`ConnectionRefused`) | Tolak sinyal (`ENGINE_UNAVAILABLE`). Set `CIRCUIT_BREAKER_ACTIVE = true` + `SystemEvent CRITICAL`. *(Notifikasi Telegram otomatis belum tersambung — gap FR-TG-01.)* |
+| Engine container tidak tersedia (`ConnectionRefused`) | Tolak sinyal (`ENGINE_UNAVAILABLE`). Set `ACCOUNT_CIRCUIT_BREAKER:{user_id} = true` untuk akun yang sedang dievaluasi + `SystemEvent CRITICAL` + notifikasi Telegram (`notify_operator`). Diverifikasi `test_engine_e2e.py` mode `down`. |
 | Response JSON tidak valid / skema salah | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_INVALID_RESPONSE"]`. |
 | `signal_id` balasan ≠ request, atau `passed == true` tapi `gates` kosong / ada gate `false` | Tolak sinyal. Catat `rejection_reasons: ["ENGINE_INVALID_RESPONSE"]` (verdict tidak konsisten = tidak dipercaya). |
 | `passed == false` dari engine | Tolak sinyal. `rejection_reasons` dari engine disimpan ke `risk_checks` (fallback `ENGINE_REJECTED` jika kosong). |
@@ -189,7 +207,9 @@ Payload dikirim dari Python FastAPI ke Rust engine untuk evaluasi:
 | `ENGINE_URL` | *(kosong)* | Base URL Rust engine. Kosong = engine nonaktif, hanya Risk Gate Python. Isi `http://engine:8080` untuk mengaktifkan. |
 | `ENGINE_TIMEOUT_MS` | `10` | Timeout request IPC dalam milidetik. |
 
-`MAX_OPEN_POSITIONS` **bukan** env var: konstanta `5` di `backend/src/risk/gate.py` (Gate 8). Engine Rust wajib memakai nilai yang sama.
+`MAX_OPEN_POSITIONS` **bukan** env var: konstanta `5` di `backend/src/risk/gate.py` (Gate 8). Engine Rust menerimanya — bersama semua ambang lain — lewat `limits` di payload, jadi tidak ada salinan angka yang perlu disinkronkan manual.
+
+Latensi terukur (audit 2026-10-26, jaringan Docker lokal, client httpx bersama, 200 request): p50 0,9 ms, p99 1,7 ms; 200/200 verdict dalam budget `ENGINE_TIMEOUT_MS=10`. Di VPS yang sibuk, timeout menghasilkan `ENGINE_TIMEOUT` (sinyal ditolak, aman) — naikkan `ENGINE_TIMEOUT_MS` bila sering terjadi.
 
 ### 6.2 Service di `docker-compose.yml` / `docker-compose.prod.yml` (Sudah Diimplementasikan)
 

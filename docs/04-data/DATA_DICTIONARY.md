@@ -1,12 +1,42 @@
 # KAMUS DATA LENGKAP (DATA DICTIONARY)
 **Dokumen:** `docs/04-data/DATA_DICTIONARY.md`  
 **Proyek:** AI Crypto Trading & Copy-Trading Platform (AUTO-TRADE-AA)  
-**Versi:** 1.1.0 (Fase 2 — Market Data Engine)  
+**Versi:** 1.2.0 (akun & multi-user, sinkron dengan migrasi 005 — audit 2026-10-26)  
 **Status:** Draf Resmi Basis Data  
 
 ---
 
 Dokumen ini mendefinisikan rincian kamus data struktural untuk seluruh tabel basis data **PostgreSQL 16** pada platform **AUTO-TRADE-AA**.
+
+> **Jumlah tabel (diverifikasi audit 2026-10-26 pada DB kosong, migrasi 001→005):** 20 tabel domain (= `backend/src/models.py`) + `alembic_version` = 21. Sampai versi 1.1.0 dokumen ini hanya memuat 18 tabel; `users` dan `binance_credentials` (migrasi 004/005) ditambahkan di Seksi 0.
+
+---
+
+## 0. Tabel: `users` & `binance_credentials` (migrasi `004`, `005`)
+Akun dashboard dan kredensial Binance per akun. Setiap akun punya portofolio paper sendiri.
+
+### Tabel `users`
+| Kolom | Tipe Data | Nullable | Default | Deskripsi | Contoh Nilai |
+|---|---|---|---|---|---|
+| `id` | `UUID` | **NO** | — (dibuat aplikasi) | Primary Key akun. | `a1eebc99-9c0b...` |
+| `email` | `VARCHAR(255)` | **NO** | — | Email login. **UNIQUE**, terindeks. | `'trader@example.com'` |
+| `password_hash` | `VARCHAR(255)` | **NO** | — | Hash bcrypt; password maks. 72 byte, min. 8 karakter saat daftar. | `'$2b$12$...'` |
+| `role` | `VARCHAR(16)` | **NO** | `'user'` | `user` / `admin`. User pertama yang mendaftar menjadi `admin` (migrasi 005). | `'admin'` |
+| `is_active` | `BOOLEAN` | **NO** | `TRUE` | `FALSE` = akun dinonaktifkan admin; login ditolak (403). | `TRUE` |
+| `created_at` | `TIMESTAMPTZ` | **NO** | `now()` | Waktu pendaftaran. | `2026-10-26 09:00:00+07` |
+| `updated_at` | `TIMESTAMPTZ` | **NO** | `now()` | Waktu perubahan terakhir. | `2026-10-26 09:00:00+07` |
+
+### Tabel `binance_credentials`
+| Kolom | Tipe Data | Nullable | Default | Deskripsi | Contoh Nilai |
+|---|---|---|---|---|---|
+| `id` | `UUID` | **NO** | — (dibuat aplikasi) | Primary Key. | `b2eebc99-9c0b...` |
+| `user_id` | `UUID` | **NO** | — | Foreign Key ke `users(id)`. **UNIQUE** — satu akun Binance per user. Akun tanpa baris ini tidak menerima sinyal dari Risk Engine. | `a1eebc99...` |
+| `api_key_encrypted` | `TEXT` | **NO** | — | API key terenkripsi Fernet (`FIELD_ENCRYPTION_KEY`). Hanya 4 digit terakhir yang pernah ditampilkan. | `'gAAAAAB...'` |
+| `api_secret_encrypted` | `TEXT` | **NO** | — | API secret terenkripsi Fernet. Tidak pernah dikembalikan API. | `'gAAAAAB...'` |
+| `created_at` | `TIMESTAMPTZ` | **NO** | `now()` | Waktu disimpan. | `2026-10-26 09:05:00+07` |
+| `updated_at` | `TIMESTAMPTZ` | **NO** | `now()` | Waktu diganti. | `2026-10-26 09:05:00+07` |
+
+Migrasi 004 juga menambah `user_id UUID NOT NULL → users(id)` (terindeks) ke `positions`, `portfolio_snapshots`, dan `risk_checks`.
 
 ---
 
@@ -21,10 +51,10 @@ Menyimpan data dompet on-chain Solana dan akun trader Binance yang diobservasi a
 | `label` | `VARCHAR(64)` | YES | `NULL` | Nama alias yang diberikan pengguna untuk mempermudah identifikasi. | `'Smart Whale #1'` |
 | `status` | `VARCHAR(32)` | **NO** | `'DISCOVERED'` | Status dompet (`DISCOVERED`, `PENDING_REVIEW`, `ACTIVE_MONITORED`, `ARCHIVED`). | `'ACTIVE_MONITORED'` |
 | `composite_score` | `NUMERIC(5,2)` | YES | `0.00` | Skor performa historis (0.00 s.d. 100.00). | `78.50` |
-| `net_pnl_usd` | `NUMERIC(16,4)` | YES | `0.0000` | Estimasi akumulasi keuntungan bersih historis. | `4520.1500` |
+| `net_pnl_usd` | `NUMERIC(16,4)` | YES | `0.0000` | Akumulasi PnL terealisasi bersih historis, **dalam SOL** (dihitung dari delta saldo SOL, sudah bersih gas & fee pool). Nama kolom historis, dipertahankan agar tidak perlu migrasi. | `12.3400` |
 | `win_rate_pct` | `NUMERIC(5,2)` | YES | `0.00` | Persentase kemenangan historis trader. | `62.50` |
 | `profit_factor` | `NUMERIC(6,2)` | YES | `0.00` | Rasio total profit terhadap total loss. | `2.15` |
-| `max_drawdown_pct`| `NUMERIC(5,2)` | YES | `0.00` | Maximum drawdown historis trader. | `14.20` |
+| `max_drawdown_pct`| `NUMERIC(5,2)` | YES | `0.00` | Maximum drawdown historis trader dari high-water mark ekuitas terealisasi; modal = SOL minimum yang mampu mendanai trade yang teramati. | `14.20` |
 | `last_active_at` | `TIMESTAMPTZ` | YES | `NULL` | Waktu transaksi terakhir terdeteksi di on-chain. | `2026-10-14 14:30:00+07` |
 | `approved_at` | `TIMESTAMPTZ` | YES | `NULL` | Waktu persetujuan operator untuk pemantauan aktif. | `2026-10-14 14:35:00+07` |
 | `created_at` | `TIMESTAMPTZ` | **NO** | `CURRENT_TIMESTAMP` | Waktu data pertama kali dicatat. | `2026-10-14 14:00:00+07` |
@@ -91,8 +121,8 @@ Data time-series harga pasar, spread bid-ask, dan likuiditas per menit.
 | `pool_liquidity_usd` | `NUMERIC(18,2)` | YES | `0.00` | Total kedalaman likuiditas pool AMM / Orderbook. | `1250000.00` |
 | `bid_price` | `NUMERIC(18,6)` | YES | `NULL` | Harga penawaran beli tertinggi (Best Bid). | `152.380000` |
 | `ask_price` | `NUMERIC(18,6)` | YES | `NULL` | Harga penawaran jual terendah (Best Ask). | `152.420000` |
-| `spread_pct` | `NUMERIC(6,4)` | YES | `0.0000` | Selisih persentase bid-ask. | `0.0262` |
-| `source` | `VARCHAR(32)` | **NO** | `'BINANCE_WS'` | Sumber data (`BINANCE_WS`, `BYBIT_WS` [roadmap], `HELIUS_RPC`, `RAYDIUM_POOL`). | `'BINANCE_WS'` |
+| `spread_pct` | `NUMERIC(6,4)` | YES | `0.0000` | Selisih persentase bid-ask. Hanya bermakna bila `bid_price` & `ask_price` terisi; bila salah satunya NULL (snapshot pool DEX), Risk Engine menganggap spread **tidak diketahui** dan gerbang spread gagal — nilai `0.0000` dari default kolom diabaikan. | `0.0262` |
+| `source` | `VARCHAR(32)` | **NO** | `'Binance_WS'` | Sumber data yang ditulis kode: `Binance_WS` (default, `ingestion/binance.py`) dan `DEXSCREENER` (token SPL, ditulis saat swap BUY segar dari wallet copy-trade yang disetujui). `BYBIT_WS` roadmap. | `'Binance_WS'` |
 | `snapshot_time` | `TIMESTAMPTZ` | **NO** | — | Timestamp data diterbitkan dari sumber. | `2026-10-14 14:31:00+07` |
 | `is_stale` | `BOOLEAN` | **NO** | `FALSE` | True jika selisih waktu snapshot > 30 detik. | `FALSE` |
 
@@ -142,7 +172,7 @@ Audit log eksekusi multi-agent Hermes dan konsumsi model AI eksternal.
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key panggilan inferensi LLM. | `22eebc99-9c0b...` |
 | `agent_run_id` | `UUID` | **NO** | — | Foreign Key ke `agent_runs(id)`. | `11eebc99...` |
 | `provider` | `VARCHAR(32)` | **NO** | `'OPENROUTER'` | Provider gateway (`OPENROUTER` / `9ROUTE`). | `'OPENROUTER'` |
-| `model_name` | `VARCHAR(64)` | **NO** | — | Nama model LLM yang diakses. | `'anthropic/claude-3.5-haiku'` |
+| `model_name` | `VARCHAR(64)` | **NO** | — | Nama model LLM yang diakses. | `'anthropic/claude-haiku-5.5'` |
 | `prompt_tokens` | `INT` | **NO** | `0` | Jumlah token prompt input. | `420` |
 | `completion_tokens` | `INT` | **NO** | `0` | Jumlah token keluaran model. | `185` |
 | `cost_usd` | `NUMERIC(8,6)` | YES | `0.000000` | Estimasi biaya pemanggilan kredit. | `0.000520` |
@@ -184,6 +214,7 @@ Mencatat hasil evaluasi 9 pintu keselamatan deterministik sebelum eksekusi diizi
 | Kolom | Tipe Data | Nullable | Default | Deskripsi & Aturan Bisnis | Contoh Nilai |
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key evaluasi risiko. | `44eebc99-9c0b...` |
+| `user_id` | `UUID` | **NO** | — | Foreign Key ke `users(id)` (migrasi 004). Satu sinyal dievaluasi per akun; maksimal satu verdict per (`user_id`, `trading_signal_id`), dijaga idempoten oleh `_process_signal`. | `a1eebc99...` |
 | `trading_signal_id` | `UUID` | **NO** | — | Foreign Key ke `trading_signals(id)`. | `33eebc99...` |
 | `passed` | `BOOLEAN` | **NO** | — | Status kelulusan mutlak: `TRUE` (Lolos) / `FALSE` (Tolak). | `TRUE` |
 | `expectancy_check` | `BOOLEAN` | **NO** | — | Pintu 1: Ekspektasi matematis bersih biaya $> 0$. | `TRUE` |
@@ -224,7 +255,7 @@ Mencatat order virtual dan transaksi pemenuhan eksekusi (*fills*) simulasi.
 | Kolom | Tipe Data | Nullable | Default | Deskripsi | Contoh Nilai |
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key eksekusi trade. | `66eebc99-9c0b...` |
-| `paper_order_id` | `UUID` | **NO** | — | Foreign Key ke `paper_orders(id)`. | `55eebc99...` |
+| `paper_order_id` | `UUID` | **NO** | — | Foreign Key ke `paper_orders(id)`. Fill entry **dan** fill exit (TP1/TP2/SL) sama-sama dicatat pada order pembuka posisi, karena `paper_orders.risk_check_id` wajib (NOT NULL) sehingga exit tidak punya order sendiri. Sebelum audit 2026-10-26 kode exit menulis `position.id` di sini → FK gagal dan posisi tidak pernah tertutup (F-26). | `55eebc99...` |
 | `position_id` | `UUID` | **NO** | — | Foreign Key ke `positions(id)`. | `77eebc99...` |
 | `executed_quantity` | `NUMERIC(24,8)`| **NO** | — | Kuantitas token yang terisi pada fill ini. | `16.79000000` |
 | `executed_price` | `NUMERIC(18,6)`| **NO** | — | Harga fill aktual setelah memperhitungkan slippage. | `152.480000` |
@@ -242,6 +273,7 @@ Menyimpan posisi terbuka aktif dan mengelola parameter level keluar (*Partial TP
 | Kolom | Tipe Data | Nullable | Default | Deskripsi & Aturan Bisnis | Contoh Nilai |
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key posisi unik. | `77eebc99-9c0b...` |
+| `user_id` | `UUID` | **NO** | — | Foreign Key ke `users(id)` (migrasi 004). Pemilik posisi. | `a1eebc99...` |
 | `token_id` | `UUID` | **NO** | — | Foreign Key ke `tokens(id)`. | `c2eebc99...` |
 | `symbol` | `VARCHAR(32)` | **NO** | — | Simbol aset (`SOLUSDT`). | `'SOLUSDT'` |
 | `status` | `VARCHAR(16)` | **NO** | `'OPEN'` | Status: `OPEN`, `PARTIALLY_CLOSED`, `CLOSED`. | `'OPEN'` |
@@ -266,6 +298,7 @@ Mencatat riwayat ekuitas, High-Water Mark, dan metrik compounding portofolio (*E
 | Kolom | Tipe Data | Nullable | Default | Deskripsi & Aturan Bisnis | Contoh Nilai |
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key snapshot. | `88eebc99-9c0b...` |
+| `user_id` | `UUID` | **NO** | — | Foreign Key ke `users(id)` (migrasi 004). Ledger per akun. | `a1eebc99...` |
 | `total_equity_usd` | `NUMERIC(18,4)`| **NO** | — | Nilai total ekuitas portofolio (Kas + Posisi). | `10245.3200` |
 | `cash_balance_usd` | `NUMERIC(18,4)`| **NO** | — | Saldo kas virtual yang belum digunakan. | `7685.1200` |
 | `open_positions_value_usd`|`NUMERIC(18,4)`|**NO**| — | Total nilai pasar posisi terbuka saat ini. | `2560.2000` |
@@ -327,7 +360,7 @@ Menyimpan data agregasi candlestick OHLCV (Open/High/Low/Close) per interval wak
 |---|---|---|---|---|---|
 | `id` | `UUID` | **NO** | `gen_random_uuid()` | Primary Key unik candle. | `bb2ebc99-9c0b-4ef8-bb6d-6bb9bd380b22` |
 | `token_id` | `UUID` | **NO** | — | Foreign Key ke `tokens(id)`. Wajib ada token terdaftar. | `c2eebc99...` |
-| `interval` | `VARCHAR(8)` | **NO** | — | Timeframe candle (`1m`, `5m`, `15m`, `1h`, `4h`, `1d`). | `'1m'` |
+| `interval` | `VARCHAR(8)` | **NO** | — | Timeframe candle yang ditulis `aggregator.py`: `M1`, `M5`, `H1`. Hermes membaca `M1`. | `'M1'` |
 | `bucket_time` | `TIMESTAMPTZ` | **NO** | — | Waktu pembukaan candle (awal bucket interval). | `2026-10-14 14:31:00+07` |
 | `open` | `NUMERIC(18,6)` | **NO** | — | Harga pembukaan candle setara USD. | `152.300000` |
 | `high` | `NUMERIC(18,6)` | **NO** | — | Harga tertinggi selama interval. | `152.650000` |

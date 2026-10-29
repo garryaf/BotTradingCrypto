@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..auth.dependencies import get_current_user
+from ..config import settings
 from ..auth.security import (
     COOKIE_NAME,
     create_access_token,
@@ -23,8 +24,31 @@ COOKIE_MAX_AGE_SEC = 7 * 24 * 3600
 
 
 class Credentials(BaseModel):
-    email: str
-    password: str
+    """Login: only bounded, so tightening the signup policy never locks out an existing account."""
+    email: str = Field(min_length=1, max_length=255)
+    password: str = Field(min_length=1)
+
+    @field_validator("password")
+    @classmethod
+    def _fits_bcrypt(cls, v: str) -> str:
+        # bcrypt>=5 raises ValueError past 72 bytes instead of truncating -> would surface as HTTP 500.
+        if len(v.encode()) > 72:
+            raise ValueError("password must be at most 72 bytes")
+        return v
+
+
+class Registration(Credentials):
+    # F-05: minimal shape checks without pulling in email-validator (Ponytail: no dep for a few lines).
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=8)
+
+    @field_validator("email")
+    @classmethod
+    def _looks_like_email(cls, v: str) -> str:
+        local, _, domain = v.partition("@")
+        if not local or "." not in domain or domain.startswith(".") or domain.endswith("."):
+            raise ValueError("invalid email")
+        return v
 
 
 class BinanceCredentialsIn(BaseModel):
@@ -39,11 +63,12 @@ def _set_session_cookie(response: Response, user_id) -> None:
         max_age=COOKIE_MAX_AGE_SEC,
         httponly=True,
         samesite="lax",
+        secure=settings.app_env != "development",  # F-04: Secure over TLS in staging/prod; off for local HTTP dev
     )
 
 
 @router.post("/register")
-async def register(body: Credentials, response: Response, session: AsyncSession = Depends(get_session)):
+async def register(body: Registration, response: Response, session: AsyncSession = Depends(get_session)):
     existing = (await session.exec(select(User).where(User.email == body.email))).first()
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")

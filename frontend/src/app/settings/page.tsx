@@ -11,11 +11,13 @@ export default function SettingsPage() {
   const [showSecret, setShowSecret] = useState(false);
   const [last4, setLast4] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     getBinanceCredentials()
       .then((c) => setLast4(c.api_key_last4))
-      .catch(() => {});
+      // Without this the page silently reads as "no key saved" when the backend is just unreachable.
+      .catch(() => setLoadFailed(true));
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -38,6 +40,12 @@ export default function SettingsPage() {
       <p className="mb-5 text-[11px] text-text-faint">
         1 akun Binance per 1 user. Key disimpan terenkripsi — hanya 4 digit terakhir yang pernah ditampilkan lagi.
       </p>
+
+      {loadFailed && (
+        <p role="alert" className="mb-4 rounded-md border border-loss/40 px-3 py-2 text-[12px] text-loss">
+          Status key tidak bisa dimuat — backend tidak merespons. Key yang tersimpan (jika ada) tidak terlihat di sini.
+        </p>
+      )}
 
       <AnimatePresence>
         {last4 && (

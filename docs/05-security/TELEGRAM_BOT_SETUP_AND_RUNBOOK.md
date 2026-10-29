@@ -3,7 +3,7 @@
 **Proyek:** AI Crypto Trading & Copy-Trading Platform (AUTO-TRADE-AA)  
 **Versi:** 1.0.0 (Fase 5)  
 **Status:** Draf Resmi Operasional  
-**Referensi:** [RBAC_AND_TELEGRAM_ACCESS.md](./RBAC_AND_TELEGRAM_ACCESS.md) · [`telegram_bot.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/control/telegram_bot.py)  
+**Referensi:** [RBAC_AND_TELEGRAM_ACCESS.md](./RBAC_AND_TELEGRAM_ACCESS.md) · [`telegram_bot.py`](../../backend/src/control/telegram_bot.py)  
 
 ---
 
@@ -45,7 +45,11 @@ Buka `.env` di root repositori, isi dua variabel berikut:
 ```dotenv
 TELEGRAM_BOT_TOKEN=123456789:AAFxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxx
 TELEGRAM_ALLOWED_USER_ID=123456789
+# Wajib juga: chat tempat perintah diterima & alert dikirim. Untuk DM ke bot, Chat ID = User ID.
+TELEGRAM_ALLOWED_CHAT_ID=123456789
 ```
+
+> Tanpa `TELEGRAM_ALLOWED_CHAT_ID` bot mengabaikan **semua** perintah dan tidak bisa mengirim alert.
 
 > **Keamanan:** Jangan commit file `.env` ke Git. File ini sudah terdaftar di `.gitignore`.
 
@@ -78,18 +82,30 @@ Semua perintah dikirim dari akun Telegram terdaftar ke bot secara langsung (DM k
 **Contoh respons:**
 ```
 🟢 RUNNING
-Equity: $10245.32
-Cash: $7685.12 | Posisi: $2560.20 (1)
-Daily PnL: $+125.40 (0.45% loss)
-Drawdown: 1.96% | HWM: $10450.00
+Posisi terbuka (semua akun): 1
 Circuit Breaker: off
 ```
 
 | Field | Keterangan |
 |---|---|
-| Status atas | 🟢 RUNNING = aktif, 🔴 PAUSED = entry baru diblokir |
-| Circuit Breaker | `🚨 ACTIVE` jika sistem dalam status freeze |
-| Daily PnL | Realized PnL hari kalender berjalan (reset tengah malam UTC) |
+| Status atas | 🟢 RUNNING = aktif, 🔴 PAUSED = entry baru diblokir (pause global operator) |
+| Posisi terbuka | Total posisi `OPEN`/`PARTIALLY_CLOSED` di semua akun |
+| Circuit Breaker | `🚨 ACTIVE` jika circuit breaker global aktif |
+
+> Bot adalah kanal **operator** (lintas akun). Equity, kas, PnL, dan drawdown per akun ada di dashboard (`/api/v1/portfolio`).
+
+---
+
+### `/positions` — Posisi Terbuka
+
+**Gunakan saat:** Ingin melihat posisi terbuka beserta floating PnL dari jarak jauh.
+
+**Contoh respons:**
+```
+📊 Posisi Terbuka:
+BTCUSDT: 0.500000 @ $100.00 | PnL $12.34
+```
+Jika tidak ada posisi: `📭 Tidak ada posisi terbuka.`
 
 ---
 
@@ -146,16 +162,18 @@ Circuit Breaker: off
 
 ## 4. Mekanisme Keamanan — Silent Ignore
 
-Setiap pesan yang berasal dari User ID yang **tidak terdaftar** di `TELEGRAM_ALLOWED_USER_ID`:
+Perintah diproses hanya jika **chat** = `TELEGRAM_ALLOWED_CHAT_ID` **dan** (bila diisi) **pengirim** = `TELEGRAM_ALLOWED_USER_ID`. Selain itu:
 
 - **Tidak mendapat respons apapun** (silent drop).
 - Bot tidak mengonfirmasi keberadaannya kepada penyerang (*prevent reconnaissance*).
-- Upaya akses tidak sah dicatat di tabel `system_events` dengan severity `WARNING`.
+- Upaya akses tidak sah **tidak** dicatat ke `system_events` (belum diimplementasikan) — hanya diabaikan.
 
-**Verifikasi dari kode** (`telegram_bot.py:88`):
+**Verifikasi dari kode** (`control/telegram_bot.py`, `_is_allowed`; diuji di `test_telegram_bot.py`):
 ```python
 if not chat_id or chat_id != settings.telegram_allowed_chat_id:
-    continue  # unregistered chat — ignored without reply, per RBAC doc
+    return False
+if settings.telegram_allowed_user_id and from_id != settings.telegram_allowed_user_id:
+    return False  # anggota lain di grup yang sama tidak bisa menjalankan /kill
 ```
 
 ---

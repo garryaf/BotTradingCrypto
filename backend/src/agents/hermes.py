@@ -75,6 +75,7 @@ async def _call_skill(session, client, agent_run_id, skill_name: str, context: d
             model_name=model,
             prompt_tokens=usage.get("prompt_tokens", 0),
             completion_tokens=usage.get("completion_tokens", 0),
+            cost_usd=Decimal(str(usage.get("cost", 0) or 0)),  # OpenRouter returns usage.cost when available (GAP-14)
             latency_ms=Decimal(str(latency_ms)),
             status_code=status_code,
             request_prompt_summary={"skill": skill_name, "context": context},
@@ -146,7 +147,10 @@ async def run_hermes_cycle(session, client: httpx.AsyncClient, symbol: str) -> T
     run.status, run.execution_time_ms = "SUCCESS", Decimal(str(round((time.monotonic() - start) * 1000, 2)))
     await session.commit()
 
-    if signal.action not in ("BUY", "SELL") or signal.confidence_score < CONFIDENCE_THRESHOLD:
+    if signal.action == "SELL":  # spot paper trading is long-only: the broker opened SELL entries as longs (F-27)
+        logger.info("Hermes dropped %s SELL: spot paper trading is long-only", ctx["symbol"])
+        return None
+    if signal.action != "BUY" or (signal.confidence_score or 0.0) < CONFIDENCE_THRESHOLD:
         return None
     if None in (signal.entry_price, signal.stop_loss, signal.take_profit_1, signal.take_profit_2,
                 signal.estimated_winrate_pct):

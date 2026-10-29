@@ -4,13 +4,23 @@ import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/** Carries the HTTP status so callers can tell "already exists" (409) from "invalid" (422). */
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...init,
   });
-  if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+  if (!res.ok) throw new HttpError(`${path} -> HTTP ${res.status}`, res.status);
   return res.json();
 }
 
@@ -59,6 +69,24 @@ export function listUsers() {
 
 export function updateUser(id: string, patch: { role?: "user" | "admin"; is_active?: boolean }) {
   return authFetch<AdminUserRow>(`/api/v1/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
+export type WalletDecision = "ACTIVE_MONITORED" | "ARCHIVED";
+
+/** Operator candidate intake: the wallet starts DISCOVERED and is scored from its swap history. */
+export function addWallet(address: string) {
+  return authFetch<{ address: string; status: string }>("/api/v1/admin/wallets", {
+    method: "POST",
+    body: JSON.stringify({ address }),
+  });
+}
+
+/** Approve a scored PENDING_REVIEW wallet for copy-trading, or archive a wallet to stop polling it. */
+export function decideWallet(address: string, status: WalletDecision) {
+  return authFetch<{ address: string; status: string }>(`/api/v1/admin/wallets/${encodeURIComponent(address)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
 /** null = not logged in, undefined = still checking. */

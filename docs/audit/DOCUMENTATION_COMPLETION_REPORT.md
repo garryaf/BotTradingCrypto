@@ -68,22 +68,22 @@ Audit ini telah memeriksa dan menganalisis berkas-berkas berikut:
 ## 4. Berkas yang Dibuat dalam Audit & Implementasi Ini (Artifacts Created)
 
 ### A. Berkas Tata Kelola & Laporan Audit:
-1. [`docs/audit/DOCUMENTATION_TASK_BACKLOG.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/DOCUMENTATION_TASK_BACKLOG.md) — Backlog 8 tugas dokumentasi lengkap dengan kriteria penerimaan terukur (100% DONE).
-2. [`docs/audit/DOCUMENTATION_COVERAGE_MATRIX.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/DOCUMENTATION_COVERAGE_MATRIX.md) — Matriks evaluasi 15 domain dokumentasi (100% COMPLETE).
-3. [`docs/audit/DOCUMENTATION_DEPENDENCIES.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/DOCUMENTATION_DEPENDENCIES.md) — Matriks dependensi logis dan roadmap eksekusi bertahap.
-4. [`docs/audit/DOCUMENTATION_COMPLETION_REPORT.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/DOCUMENTATION_COMPLETION_REPORT.md) — Laporan penyelesaian dokumentasi & audit.
-5. [`docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md) — Matriks keterlacakan 48 entitas (BR, FR, AC) ke kode implementasi.
+1. [`docs/audit/DOCUMENTATION_TASK_BACKLOG.md`](../../docs/audit/DOCUMENTATION_TASK_BACKLOG.md) — Backlog 8 tugas dokumentasi lengkap dengan kriteria penerimaan terukur (100% DONE).
+2. [`docs/audit/DOCUMENTATION_COVERAGE_MATRIX.md`](../../docs/audit/DOCUMENTATION_COVERAGE_MATRIX.md) — Matriks evaluasi 15 domain dokumentasi (100% COMPLETE).
+3. [`docs/audit/DOCUMENTATION_DEPENDENCIES.md`](../../docs/audit/DOCUMENTATION_DEPENDENCIES.md) — Matriks dependensi logis dan roadmap eksekusi bertahap.
+4. [`docs/audit/DOCUMENTATION_COMPLETION_REPORT.md`](../../docs/audit/DOCUMENTATION_COMPLETION_REPORT.md) — Laporan penyelesaian dokumentasi & audit.
+5. [`docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md`](../../docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md) — Matriks keterlacakan 48 entitas (BR, FR, AC) ke kode implementasi.
 
 ### B. Dokumen Spesifikasi Teknis & Keamanan Baru:
-6. [`docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md) — SOP Operasional penanganan 4 pemicu circuit breaker, drill kill switch, dan playbook recovery.
-7. [`docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md) — Arsitektur integrasi mikro-latensi Rust engine via IPC HTTP, endpoint contract, dan fail-over logic.
-8. [`docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md) — Runbook operasional bot Telegram, prosedur allowlist ID, rate-limiting, dan perintah kontrol darurat.
-9. [`docs/01-requirements/UI_UX_SPECIFICATION.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/UI_UX_SPECIFICATION.md) — Spesifikasi interaksi UI/UX dashboard, token warna, status dinamis maskot Bull vs Bear, dan responsif layout.
+6. [`docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md`](../../docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md) — SOP Operasional penanganan 4 pemicu circuit breaker, drill kill switch, dan playbook recovery.
+7. [`docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md`](../../docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md) — Arsitektur integrasi mikro-latensi Rust engine via IPC HTTP, endpoint contract, dan fail-over logic.
+8. [`docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md`](../../docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md) — Runbook operasional bot Telegram, prosedur allowlist ID, rate-limiting, dan perintah kontrol darurat.
+9. [`docs/01-requirements/UI_UX_SPECIFICATION.md`](../../docs/01-requirements/UI_UX_SPECIFICATION.md) — Spesifikasi interaksi UI/UX dashboard, token warna, status dinamis maskot Bull vs Bear, dan responsif layout.
 
 ### C. Artefak Deployment & Infrastruktur Produksi Baru:
-10. [`frontend/Dockerfile`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/Dockerfile) — Multi-stage production container build Next.js 15 dengan non-root user `nextjs`.
-11. [`docker-compose.prod.yml`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docker-compose.prod.yml) — Konfigurasi orkestrasi container produksi (PostgreSQL, FastAPI Backend, Next.js Frontend) dengan isolasi jaringan internal `127.0.0.1` dan restart policy `always`.
-12. [`README.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/README.md) — Panduan komprehensif dual-track deployment (Local Development & Production VPS Linux), Nginx reverse proxy, SSL Certbot, UFW firewall, dan cron backup PostgreSQL.
+10. [`frontend/Dockerfile`](../../frontend/Dockerfile) — Multi-stage production container build Next.js 15 dengan non-root user `nextjs`.
+11. [`docker-compose.prod.yml`](../../docker-compose.prod.yml) — Konfigurasi orkestrasi container produksi (PostgreSQL, FastAPI Backend, Next.js Frontend) dengan isolasi jaringan internal `127.0.0.1` dan restart policy `always`.
+12. [`README.md`](../../README.md) — Panduan komprehensif dual-track deployment (Local Development & Production VPS Linux), Nginx reverse proxy, SSL Certbot, UFW firewall, dan cron backup PostgreSQL.
 
 ---
 

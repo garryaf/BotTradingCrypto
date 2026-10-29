@@ -10,9 +10,10 @@ from uuid import UUID
 
 from sqlmodel import select
 
-from ..models import SystemEvent, TradingSignal, UserSetting
+from ..models import Position, SystemEvent, TradingSignal, UserSetting
 from ..risk.engine import (
     CIRCUIT_BREAKER_KEY,
+    OPEN_POSITION_STATUSES,
     PAUSED_KEY,
     _account_breaker_key,
     _account_paused_key,
@@ -90,6 +91,21 @@ async def system_status(session) -> dict:
         "paused": paused,
         "circuit_breaker_active": bool(cb_row and cb_row.value == "true"),
     }
+
+
+async def open_positions_detail(session) -> list[dict]:
+    """Operator-wide open positions with floating PnL — backs the Telegram /positions
+    command (FR-TG, README SOP). Operator surface, so it spans every account."""
+    rows = (await session.exec(select(Position).where(Position.status.in_(OPEN_POSITION_STATUSES)))).all()
+    return [
+        {
+            "symbol": p.symbol,
+            "quantity": p.current_quantity,
+            "average_entry_price": p.average_entry_price,
+            "unrealized_pnl_usd": p.unrealized_pnl_usd or 0,
+        }
+        for p in rows
+    ]
 
 
 async def pause_account(session, user_id: UUID) -> dict:

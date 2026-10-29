@@ -11,8 +11,19 @@ export function KillSwitch() {
   const [open, setOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const [engaged, setEngaged] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const frame = useRef<number | null>(null);
   const start = useRef(0);
+
+  // An emergency stop must never report "engaged" unless the backend confirmed it.
+  const alert = error && (
+    <p
+      role="alert"
+      className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-loss/40 bg-bg-panel-raised p-2.5 text-[11px] text-loss"
+    >
+      {error}
+    </p>
+  );
 
   function stopHold() {
     if (frame.current) cancelAnimationFrame(frame.current);
@@ -26,10 +37,14 @@ export function KillSwitch() {
       const pct = Math.min((performance.now() - start.current) / HOLD_MS, 1);
       setProgress(pct);
       if (pct >= 1) {
-        setEngaged(true);
         setOpen(false);
         stopHold();
-        apiPost("/api/v1/control/kill").catch(() => {});
+        apiPost("/api/v1/control/kill")
+          .then(() => {
+            setError(null);
+            setEngaged(true);
+          })
+          .catch(() => setError("EMERGENCY STOP GAGAL dikirim — sistem BELUM dihentikan. Cek koneksi/sesi lalu coba lagi."));
         return;
       }
       frame.current = requestAnimationFrame(tick);
@@ -39,18 +54,25 @@ export function KillSwitch() {
 
   if (engaged) {
     return (
-      <motion.button
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        onClick={() => {
-          setEngaged(false);
-          apiPost("/api/v1/control/resume").catch(() => {});
-        }}
-        className="flex items-center gap-2 rounded-lg border border-profit/30 bg-profit/10 px-3.5 py-2 text-xs font-medium text-profit"
-      >
-        <ShieldCheck size={14} />
-        LIVE LOCK ENGAGED
-      </motion.button>
+      <div className="relative">
+        <motion.button
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          onClick={() =>
+            apiPost("/api/v1/control/resume")
+              .then(() => {
+                setError(null);
+                setEngaged(false);
+              })
+              .catch(() => setError("Resume gagal — sistem masih dihentikan."))
+          }
+          className="flex items-center gap-2 rounded-lg border border-profit/30 bg-profit/10 px-3.5 py-2 text-xs font-medium text-profit"
+        >
+          <ShieldCheck size={14} />
+          LIVE LOCK ENGAGED
+        </motion.button>
+        {alert}
+      </div>
     );
   }
 
@@ -92,6 +114,7 @@ export function KillSwitch() {
           </motion.div>
         )}
       </AnimatePresence>
+      {!open && alert}
     </div>
   );
 }

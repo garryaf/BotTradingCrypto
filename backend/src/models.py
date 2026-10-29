@@ -48,7 +48,7 @@ class Wallet(SQLModel, table=True):
     label: str | None = Field(default=None, max_length=64)
     status: str = Field(max_length=32, default="DISCOVERED")
     composite_score: Decimal = Field(default=Decimal("0.00"), max_digits=5, decimal_places=2)
-    net_pnl_usd: Decimal = Field(default=Decimal("0.0000"), max_digits=16, decimal_places=4)
+    net_pnl_usd: Decimal = Field(default=Decimal("0.0000"), max_digits=16, decimal_places=4)  # holds SOL (wallet_scorer); name kept to avoid a migration
     win_rate_pct: Decimal = Field(default=Decimal("0.00"), max_digits=5, decimal_places=2)
     profit_factor: Decimal = Field(default=Decimal("0.00"), max_digits=6, decimal_places=2)
     max_drawdown_pct: Decimal = Field(default=Decimal("0.00"), max_digits=5, decimal_places=2)

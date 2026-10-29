@@ -46,11 +46,11 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-01`
 - **Related Requirement/Rule IDs:** `BR-RSK-03` (Daily Loss Limit), `BR-RSK-04` (Drawdown Limit), `AC-RSK-04`
 - **Existing Document References:**  
-  - [CIRCUIT_BREAKER_OPERATIONAL_SOP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)
-  - [FAILURE_MODES_AND_RECOVERY.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md#L38)
-  - [ARCHITECTURE_REVIEW_AND_ALIGNMENT.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/00-overview/ARCHITECTURE_REVIEW_AND_ALIGNMENT.md#L50)
-  - [backend/src/risk/gate.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/risk/gate.py)
-  - [backend/src/api/control.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/api/control.py)
+  - [CIRCUIT_BREAKER_OPERATIONAL_SOP.md](../../docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md)
+  - [FAILURE_MODES_AND_RECOVERY.md](../../docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md#L38)
+  - [ARCHITECTURE_REVIEW_AND_ALIGNMENT.md](../../docs/00-overview/ARCHITECTURE_REVIEW_AND_ALIGNMENT.md#L50)
+  - [backend/src/risk/gate.py](../../backend/src/risk/gate.py)
+  - [backend/src/api/control.py](../../backend/src/api/control.py)
 - **Expected Deliverable:**  
   File baru `docs/05-security/CIRCUIT_BREAKER_OPERATIONAL_SOP.md` dan pembaruan mendalam pada `docs/02-architecture/FAILURE_MODES_AND_RECOVERY.md`. **[TERLAKSANA]**
 - **Scope:**  
@@ -84,17 +84,17 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-02`
 - **Related Requirement/Rule IDs:** `FR-MKT-01`, `ADR-005`
 - **Existing Document References:**  
-  - [OPEN_QUESTIONS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/00-overview/OPEN_QUESTIONS.md#L16)
-  - [ARCHITECTURE_OVERVIEW.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/ARCHITECTURE_OVERVIEW.md#L81)
-  - [SYSTEM_CONTEXT.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/SYSTEM_CONTEXT.md#L45)
-  - [DATA_DICTIONARY.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/04-data/DATA_DICTIONARY.md#L20)
-  - [ERD.mmd](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/03-diagrams/ERD.mmd#L29)
-  - [SYSTEM_CONTEXT.mmd](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/03-diagrams/SYSTEM_CONTEXT.mmd#L28)
-  - [COMPONENT_DIAGRAM.mmd](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/03-diagrams/COMPONENT_DIAGRAM.mmd#L41)
-  - [FUNCTIONAL_REQUIREMENTS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md#L116)
-  - [SECRET_MANAGEMENT.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/SECRET_MANAGEMENT.md#L35)
-  - [.env.example](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/.env.example#L40)
-  - [backend/src/ingestion/binance.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/ingestion/binance.py)
+  - [OPEN_QUESTIONS.md](../../docs/00-overview/OPEN_QUESTIONS.md#L16)
+  - [ARCHITECTURE_OVERVIEW.md](../../docs/02-architecture/ARCHITECTURE_OVERVIEW.md#L81)
+  - [SYSTEM_CONTEXT.md](../../docs/02-architecture/SYSTEM_CONTEXT.md#L45)
+  - [DATA_DICTIONARY.md](../../docs/04-data/DATA_DICTIONARY.md#L20)
+  - [ERD.mmd](../../docs/03-diagrams/ERD.mmd#L29)
+  - [SYSTEM_CONTEXT.mmd](../../docs/03-diagrams/SYSTEM_CONTEXT.mmd#L28)
+  - [COMPONENT_DIAGRAM.mmd](../../docs/03-diagrams/COMPONENT_DIAGRAM.mmd#L41)
+  - [FUNCTIONAL_REQUIREMENTS.md](../../docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md#L116)
+  - [SECRET_MANAGEMENT.md](../../docs/05-security/SECRET_MANAGEMENT.md#L35)
+  - [.env.example](../../.env.example#L40)
+  - [backend/src/ingestion/binance.py](../../backend/src/ingestion/binance.py)
 - **Expected Deliverable:**  
   Pembaruan tersinkronisasi pada `docs/00-overview/OPEN_QUESTIONS.md`, `docs/02-architecture/ARCHITECTURE_OVERVIEW.md`, `docs/02-architecture/SYSTEM_CONTEXT.md`, `docs/04-data/DATA_DICTIONARY.md`, `.env.example`, dan artefak diagram terkait.
 - **Scope:**  
@@ -125,10 +125,10 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-03`
 - **Related Requirement/Rule IDs:** `FR-ING-04` (Error Ingestion & DLQ), `FR-MKT-02` (Candle Aggregator)
 - **Existing Document References:**  
-  - [DATA_MODEL.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/04-data/DATA_MODEL.md)
-  - [DATA_DICTIONARY.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/04-data/DATA_DICTIONARY.md)
-  - [backend/alembic/versions/002_ingestion_dlq_and_ohlcv.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/alembic/versions/002_ingestion_dlq_and_ohlcv.py)
-  - [backend/alembic/versions/003_risk_checks_max_positions.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/alembic/versions/003_risk_checks_max_positions.py)
+  - [DATA_MODEL.md](../../docs/04-data/DATA_MODEL.md)
+  - [DATA_DICTIONARY.md](../../docs/04-data/DATA_DICTIONARY.md)
+  - [backend/alembic/versions/002_ingestion_dlq_and_ohlcv.py](../../backend/alembic/versions/002_ingestion_dlq_and_ohlcv.py)
+  - [backend/alembic/versions/003_risk_checks_max_positions.py](../../backend/alembic/versions/003_risk_checks_max_positions.py)
 - **Expected Deliverable:**  
   Seksi baru pada `DATA_DICTIONARY.md` untuk tabel `ingestion_errors` dan `market_ohlcv`, serta pembaruan definisi kolom `risk_checks.max_positions_check`.
 - **Scope:**  
@@ -145,7 +145,7 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 
 ---
 
-#### DOC-TASK-004: Spesifikasi Integrasi & Batas Tanggung Jawab Core Engine Rust ([ADR-006](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/adr/ADR-006-hybrid-python-rust-architecture.md))
+#### DOC-TASK-004: Spesifikasi Integrasi & Batas Tanggung Jawab Core Engine Rust ([ADR-006](../../docs/02-architecture/adr/ADR-006-hybrid-python-rust-architecture.md))
 - **Task ID:** `DOC-TASK-004`
 - **Task Title:** Dokumentasi Spesifikasi Arsitektur Integrasi Rust Engine dan FastAPI Backend
 - **Category:** `G. Technical Documentation`
@@ -159,9 +159,9 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-04`
 - **Related Requirement/Rule IDs:** `ADR-006`, `NFR-PRF-01` (Evaluasi risiko sub-milidetik)
 - **Existing Document References:**  
-  - [ADR-006-hybrid-python-rust-architecture.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/02-architecture/adr/ADR-006-hybrid-python-rust-architecture.md)
-  - [docker-compose.yml](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docker-compose.yml)
-  - [engine/src/main.rs](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/engine/src/main.rs)
+  - [ADR-006-hybrid-python-rust-architecture.md](../../docs/02-architecture/adr/ADR-006-hybrid-python-rust-architecture.md)
+  - [docker-compose.yml](../../docker-compose.yml)
+  - [engine/src/main.rs](../../engine/src/main.rs)
 - **Expected Deliverable:**  
   Dokumen spesifikasi teknis baru: `docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md`.
 - **Scope:**  
@@ -194,9 +194,9 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-05`
 - **Related Requirement/Rule IDs:** `AC-SIM-03`, Milestone 6 Acceptance Criteria
 - **Existing Document References:**  
-  - [TESTING_PLAN.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/TESTING_PLAN.md)
-  - [ROADMAP.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/00-overview/ROADMAP.md#L126)
-  - [backend/src/backtest/engine.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/backtest/engine.py)
+  - [TESTING_PLAN.md](../../docs/01-requirements/TESTING_PLAN.md)
+  - [ROADMAP.md](../../docs/00-overview/ROADMAP.md#L126)
+  - [backend/src/backtest/engine.py](../../backend/src/backtest/engine.py)
 - **Expected Deliverable:**  
   Pembaruan pada `docs/01-requirements/TESTING_PLAN.md` (Seksi Backtesting Methodology & Acceptance Thresholds).
 - **Scope:**  
@@ -227,8 +227,8 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-06`
 - **Related Requirement/Rule IDs:** `AC-CTL-01`, `AC-CTL-02`, `RBAC-TG-01`
 - **Existing Document References:**  
-  - [RBAC_AND_TELEGRAM_ACCESS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/RBAC_AND_TELEGRAM_ACCESS.md)
-  - [backend/src/control/telegram_bot.py](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/control/telegram_bot.py)
+  - [RBAC_AND_TELEGRAM_ACCESS.md](../../docs/05-security/RBAC_AND_TELEGRAM_ACCESS.md)
+  - [backend/src/control/telegram_bot.py](../../backend/src/control/telegram_bot.py)
 - **Expected Deliverable:**  
   File baru `docs/05-security/TELEGRAM_BOT_SETUP_AND_RUNBOOK.md`.
 - **Scope:**  
@@ -258,9 +258,9 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-07`
 - **Related Requirement/Rule IDs:** Seluruh `BR`, `FR`, `NFR`, dan `AC`
 - **Existing Document References:**  
-  - [BUSINESS_REQUIREMENTS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/BUSINESS_REQUIREMENTS.md)
-  - [FUNCTIONAL_REQUIREMENTS.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md)
-  - [ACCEPTANCE_CRITERIA.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/01-requirements/ACCEPTANCE_CRITERIA.md)
+  - [BUSINESS_REQUIREMENTS.md](../../docs/01-requirements/BUSINESS_REQUIREMENTS.md)
+  - [FUNCTIONAL_REQUIREMENTS.md](../../docs/01-requirements/FUNCTIONAL_REQUIREMENTS.md)
+  - [ACCEPTANCE_CRITERIA.md](../../docs/01-requirements/ACCEPTANCE_CRITERIA.md)
 - **Expected Deliverable:**  
   Dokumen `docs/audit/REQUIREMENTS_TRACEABILITY_MATRIX.md`.
 - **Scope:**  
@@ -291,8 +291,8 @@ Berdasarkan audit komprehensif terhadap dokumen spesifikasi (`docs/`), artefak d
 - **Related Audit Finding IDs:** `AUDIT-FINDING-08`
 - **Related Requirement/Rule IDs:** `FR-UI-01`, `FR-UI-02`
 - **Existing Document References:**  
-  - [frontend/src/components/ProfitLossMascot.tsx](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/ProfitLossMascot.tsx)
-  - [frontend/src/components/PnlGlow.tsx](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/PnlGlow.tsx)
+  - [frontend/src/components/ProfitLossMascot.tsx](../../frontend/src/components/ProfitLossMascot.tsx)
+  - [frontend/src/components/PnlGlow.tsx](../../frontend/src/components/PnlGlow.tsx)
 - **Expected Deliverable:**  
   Dokumen baru `docs/01-requirements/UI_UX_SPECIFICATION.md`.
 - **Scope:**  

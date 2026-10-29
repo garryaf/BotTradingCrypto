@@ -5,11 +5,23 @@ import { Check, X } from "lucide-react";
 import { NotConnected } from "./NotConnected";
 import { usePolling } from "@/lib/api";
 
+// Thresholds the backend gates enforce (risk/engine.py risk_limits) — labels read these, never a copy.
+type Limits = {
+  max_risk_per_trade_pct: number;
+  daily_loss_limit_pct: number;
+  max_drawdown_limit_pct: number;
+  max_spread_pct: number;
+  min_24h_volume_usd: number;
+  max_open_positions: number;
+  data_freshness_max_age_sec: number;
+};
+
 type RiskStatus = {
   paused: boolean;
   circuit_breaker_active: boolean;
   daily_loss_pct: number;
   current_drawdown_pct: number;
+  limits: Limits;
   latest_check: {
     passed: boolean;
     rejection_reasons: string[];
@@ -27,18 +39,26 @@ type RiskStatus = {
   } | null;
 };
 
-const GATES: { key: keyof NonNullable<RiskStatus["latest_check"]>; label: string }[] = [
-  { key: "expectancy_check", label: "1. Positive Expectancy" },
-  { key: "risk_per_trade_check", label: "2. Risk per Trade ≤ 0.5%" },
-  { key: "daily_loss_check", label: "3. Daily Loss ≤ 2%" },
-  { key: "drawdown_check", label: "4. Drawdown ≤ 8%" },
-  { key: "spread_check", label: "5. Spread & Likuiditas" },
-  { key: "stop_loss_check", label: "6. Stop Loss Valid" },
-  { key: "balance_lot_check", label: "7. Saldo & Lot Size" },
-  { key: "max_positions_check", label: "8. Batas Posisi Terbuka" },
-  { key: "circuit_breaker_check", label: "8b. Circuit Breaker" },
-  { key: "data_freshness_check", label: "9. Freshness Data" },
-];
+// toFixed strips float noise (0.0035 * 100 = 0.35000000000000003).
+const pct = (fraction: number) => +(fraction * 100).toFixed(4);
+
+function gates(l: Limits): { key: keyof NonNullable<RiskStatus["latest_check"]>; label: string }[] {
+  return [
+    { key: "expectancy_check", label: "1. Expectancy Positif (net fee)" },
+    { key: "risk_per_trade_check", label: `2. Risk per Trade ≤ ${pct(l.max_risk_per_trade_pct)}%` },
+    { key: "daily_loss_check", label: `3. Daily Loss < ${l.daily_loss_limit_pct}%` },
+    { key: "drawdown_check", label: `4. Drawdown < ${l.max_drawdown_limit_pct}%` },
+    {
+      key: "spread_check",
+      label: `5. Spread ≤ ${l.max_spread_pct}% & Vol 24h ≥ $${(l.min_24h_volume_usd / 1_000_000).toLocaleString("en-US")}M`,
+    },
+    { key: "stop_loss_check", label: "6. Stop Loss Valid" },
+    { key: "balance_lot_check", label: "7. Saldo & Lot Size" },
+    { key: "max_positions_check", label: `8. Posisi Terbuka < ${l.max_open_positions}` },
+    { key: "circuit_breaker_check", label: "8b. Circuit Breaker" },
+    { key: "data_freshness_check", label: `9. Data ≤ ${l.data_freshness_max_age_sec} detik` },
+  ];
+}
 
 export function RiskGatePanel() {
   const data = usePolling<RiskStatus>("/api/v1/risk/status", 5000);
@@ -68,7 +88,7 @@ export function RiskGatePanel() {
         )}
       </div>
       <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-        {GATES.map((gate) => {
+        {gates(data.limits).map((gate) => {
           const passed = check[gate.key] as boolean;
           return (
             <motion.div

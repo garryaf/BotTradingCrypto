@@ -40,6 +40,8 @@ def _metrics(trades: list[dict]) -> dict:
 
 def run_backtest(bars: list[Bar], initial_capital: Decimal = Decimal(10000)) -> dict:
     closes = [b.close for b in bars]
+    highs  = [b.high  for b in bars]
+    lows   = [b.low   for b in bars]
     split_idx = int(len(bars) * 0.7)  # TASK-6.2: 70% in-sample / 30% out-of-sample, chronological
 
     cash = initial_capital
@@ -86,7 +88,11 @@ def run_backtest(bars: list[Bar], initial_capital: Decimal = Decimal(10000)) -> 
                 position = None
 
         if position is None:
-            signal = generate_signal(closes[: i + 1])  # AC-SIM-03: strictly no future bars
+            signal = generate_signal(
+                closes[:i + 1],
+                highs_so_far=highs[:i + 1],
+                lows_so_far=lows[:i + 1],
+            )  # AC-SIM-03: strictly no future bars
             if signal:
                 equity = cash
                 hwm = max(hwm, equity)

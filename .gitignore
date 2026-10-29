@@ -8,6 +8,8 @@
 # Data and Persistence
 .data/
 postgres_data/
+logs/
+*.log
 
 # Python
 __pycache__/
@@ -20,6 +22,7 @@ venv/
 .venv/
 build/
 dist/
+*.egg-info/
 
 # Rust
 target/

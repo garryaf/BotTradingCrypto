@@ -126,6 +126,7 @@ Dokumen ini memformalkan seluruh 13 keputusan arsitektur dan parameter operasion
 ### Q-12: Provider LLM apa saja yang tersedia dan bagaimana ketentuan penggunaannya?
 - **Status Keputusan:** **DISETUJUI (APPROVED)**
 - **Keputusan Arsitektur:** **OpenRouter sebagai provider primer dan 9Route sebagai cadangan (*fallback*); Model default yang disarankan: model dengan rasio biaya/performa tinggi (`anthropic/claude-3.5-haiku` atau `google/gemini-flash-1.5`).**
+- **Pembaruan (audit 2026-10-26):** `anthropic/claude-3.5-haiku` sudah tidak tersedia di OpenRouter. Default di `backend/src/config.py`, `.env.example`, dan README kini satu: `anthropic/claude-haiku-5.5` (ada di `GET https://openrouter.ai/api/v1/models` per 2026-10-26). Default 9Route (`google/gemini-flash-1.5`) belum diverifikasi — katalog 9Route tidak publik. `max_tokens` aktual di gateway adalah 2500 (bukan 1000) karena token penalaran ikut terhitung.
 - **Rasional:** Fleksibilitas beralih antar model tanpa mengubah kode adapter, memanfaatkan free tier atau kuota terjangkau.
 - **Konsekuensi / Dampak Teknis:** Lapisan AI Model Gateway membungkus pemanggilan dengan batas token maksimum (*max_tokens: 1000*), timeout 15 detik, dan fallback otomatis ke provider sekunder jika provider primer mengalami error HTTP 429/500.
 

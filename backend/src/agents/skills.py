@@ -4,6 +4,11 @@ from functools import lru_cache
 from pathlib import Path
 
 SKILLS_DIR = Path(".agents/skills")
+if not SKILLS_DIR.exists():
+    _repo_root_skills = Path(__file__).resolve().parents[3] / ".agents" / "skills"
+    if _repo_root_skills.exists():
+        SKILLS_DIR = _repo_root_skills
+
 OUTPUT_SUFFIX = "\n\nBalas HANYA dengan satu objek JSON sesuai format contoh di atas. Jangan sertakan teks lain, markdown, atau penjelasan di luar JSON."
 
 

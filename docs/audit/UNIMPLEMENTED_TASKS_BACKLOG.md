@@ -49,7 +49,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-ENG-01`
 - **Komponen:** `engine/` (Core High-Speed Risk Gate Engine)
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`engine/src/main.rs`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/engine/src/main.rs) (HTTP server & 10-gate Risk Evaluator, 4 unit tests passing).
+- **File Implementasi:** [`engine/src/main.rs`](../../engine/src/main.rs) (HTTP server & 10-gate Risk Evaluator, 4 unit tests passing).
 - **Referensi Dokumen:** `ADR-006`, `docs/02-architecture/RUST_ENGINE_INTEGRATION_SPEC.md`, `docs/audit/IMPLEMENTATION_GAP_PHASES.md` (G1).
 
 ---
@@ -58,7 +58,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-WLT-01`
 - **Komponen:** `backend/src/agents/` / `backend/src/ingestion/`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/agents/wallet_scorer.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/agents/wallet_scorer.py), [`backend/src/agents/test_wallet_scorer.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/agents/test_wallet_scorer.py).
+- **File Implementasi:** [`backend/src/agents/wallet_scorer.py`](../../backend/src/agents/wallet_scorer.py), [`backend/src/agents/test_wallet_scorer.py`](../../backend/src/agents/test_wallet_scorer.py).
 - **Referensi Dokumen:** `FR-WLT-01`, `BR-01`, `docs/03-diagrams/WALLET_DISCOVERY_FLOWCHART.mmd`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:47`.
 
 ---
@@ -67,7 +67,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-NOT-01`
 - **Komponen:** `backend/src/control/telegram_bot.py` & `backend/src/risk/engine.py`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/control/telegram_bot.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/control/telegram_bot.py), [`backend/src/control/test_telegram_bot.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/control/test_telegram_bot.py).
+- **File Implementasi:** [`backend/src/control/telegram_bot.py`](../../backend/src/control/telegram_bot.py), [`backend/src/control/test_telegram_bot.py`](../../backend/src/control/test_telegram_bot.py).
 - **Referensi Dokumen:** `FR-TG-01`, `AC-CTL-03`, `CIRCUIT_BREAKER_OPERATIONAL_SOP.md`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:99`.
 - **Kondisi Sumber Kode:**  
   `backend/src/control/telegram_bot.py` memiliki fungsi `_send_message()` dan loop polling perintah `/status`, `/pause`, `/resume`, `/kill`. Namun, modul ini tidak mendengarkan atau terhubung ke event loop penulisan `SystemEvent` atau pemicu Circuit Breaker di `backend/src/risk/engine.py`.
@@ -94,7 +94,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-TST-01`
 - **Komponen:** `backend/src/ingestion/`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/ingestion/test_aggregator.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/ingestion/test_aggregator.py).
+- **File Implementasi:** [`backend/src/ingestion/test_aggregator.py`](../../backend/src/ingestion/test_aggregator.py).
 - **Referensi Dokumen:** `FR-ING-03`, `FR-ING-04`, `FR-MKT-02`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:155`.
 
 ---
@@ -103,7 +103,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-TST-02`
 - **Komponen:** `backend/src/risk/`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/risk/test_ledger.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/risk/test_ledger.py).
+- **File Implementasi:** [`backend/src/risk/test_ledger.py`](../../backend/src/risk/test_ledger.py).
 - **Referensi Dokumen:** `FR-SIM-02`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:157`.
 
 ---
@@ -112,7 +112,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-TST-03`
 - **Komponen:** `backend/src/ingestion/`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/ingestion/solana.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/ingestion/solana.py), [`backend/src/ingestion/test_heuristics.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/ingestion/test_heuristics.py).
+- **File Implementasi:** [`backend/src/ingestion/solana.py`](../../backend/src/ingestion/solana.py), [`backend/src/ingestion/test_heuristics.py`](../../backend/src/ingestion/test_heuristics.py).
 - **Referensi Dokumen:** `AC-ING-04`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:159`.
 
 ---
@@ -121,7 +121,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-OPS-01`
 - **Komponen:** Deployment / Infra
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`scripts/ram_soak_monitor.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/scripts/ram_soak_monitor.py).
+- **File Implementasi:** [`scripts/ram_soak_monitor.py`](../../scripts/ram_soak_monitor.py).
 - **Referensi Dokumen:** `AC-OPS-01`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:136`, `ROADMAP.md:131`.
 
 ---
@@ -130,7 +130,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-OPS-02`
 - **Komponen:** Database / Operasional
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`scripts/drill_db_restore.sh`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/scripts/drill_db_restore.sh).
+- **File Implementasi:** [`scripts/drill_db_restore.sh`](../../scripts/drill_db_restore.sh).
 - **Referensi Dokumen:** `AC-OPS-03`, `DATABASE_MIGRATION_STRATEGY.md`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:138`.
 
 ---
@@ -143,7 +143,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-CPY-01`
 - **Komponen:** `backend/src/agents/copy_trade.py` & `backend/src/ingestion/solana.py`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/agents/copy_trade.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/agents/copy_trade.py), [`backend/src/agents/test_copy_trade.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/agents/test_copy_trade.py), [`backend/src/ingestion/solana.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/ingestion/solana.py).
+- **File Implementasi:** [`backend/src/agents/copy_trade.py`](../../backend/src/agents/copy_trade.py), [`backend/src/agents/test_copy_trade.py`](../../backend/src/agents/test_copy_trade.py), [`backend/src/ingestion/solana.py`](../../backend/src/ingestion/solana.py).
 - **Referensi Dokumen:** `COPY_TRADING_FLOWCHART.mmd`, `docs/audit/IMPLEMENTATION_GAP_PHASES.md` (G4).
 
 ---
@@ -152,7 +152,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-DOC-01`
 - **Komponen:** Dokumentasi Audit
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`docs/audit/DOCUMENTATION_TASK_BACKLOG.md`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/audit/DOCUMENTATION_TASK_BACKLOG.md).
+- **File Implementasi:** [`docs/audit/DOCUMENTATION_TASK_BACKLOG.md`](../../docs/audit/DOCUMENTATION_TASK_BACKLOG.md).
 - **Referensi Dokumen:** `docs/audit/DOCUMENTATION_TASK_BACKLOG.md:158`, `docs/audit/IMPLEMENTATION_GAP_PHASES.md:28`.
 - **Hasil:** Klaim fiktif "terbukti 292ns" telah direvisi secara faktual mencatat implementasi riil crate Rust di `engine/src/main.rs`.
 
@@ -162,7 +162,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-TST-04`
 - **Komponen:** `backend/src/ingestion/`
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/ingestion/test_binance.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/ingestion/test_binance.py).
+- **File Implementasi:** [`backend/src/ingestion/test_binance.py`](../../backend/src/ingestion/test_binance.py).
 - **Referensi Dokumen:** `FR-MKT-01`, `REQUIREMENTS_TRACEABILITY_MATRIX.md:80`.
 - **Hasil:** Suite pengujian mandiri memvalidasi parsing market data Binance Spot, deteksi data kadaluarsa (>30s) terlempar ke DLQ, dan simulasi kegagalan HTTP network yang dialirkan ke DLQ secara aman.
 
@@ -172,7 +172,7 @@ Mengacu pada prinsip **Ponytail (Lazy Senior Dev Mode)**:
 - **Task ID:** `GAP-LIV-01`
 - **Komponen:** Keamanan & Eksekusi Live
 - **Status Saat Ini:** ✅ **SELESAI (DONE - 24 Okt 2026)**
-- **File Implementasi:** [`backend/src/risk/burner_guard.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/risk/burner_guard.py), [`backend/src/risk/test_burner_guard.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/risk/test_burner_guard.py), [`backend/src/main.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/main.py).
+- **File Implementasi:** [`backend/src/risk/burner_guard.py`](../../backend/src/risk/burner_guard.py), [`backend/src/risk/test_burner_guard.py`](../../backend/src/risk/test_burner_guard.py), [`backend/src/main.py`](../../backend/src/main.py).
 - **Referensi Dokumen:** `ROADMAP.md` Fase 7 (`TASK-7.1` s.d. `TASK-7.4`), `docs/05-security/LIVE_TRADING_SAFETY_GATE.md`.
 - **Hasil:** Mekanisme pengaman terverifikasi:
   1. `assert_paper_mode()` mengunci `LIVE_TRADING_ENABLED = False` pada startup aplikasi.

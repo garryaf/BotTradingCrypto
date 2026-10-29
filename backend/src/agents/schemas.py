@@ -41,6 +41,6 @@ class SignalResult(BaseModel):
     take_profit_1: float | None = None
     take_profit_2: float | None = None
     estimated_winrate_pct: float | None = None
-    confidence_score: float = Field(ge=0, le=1)
+    confidence_score: float | None = Field(default=0.0, ge=0, le=1)
     risk_reward_ratio: float | None = None
     rationale: str

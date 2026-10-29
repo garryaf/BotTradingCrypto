@@ -115,8 +115,41 @@ def test_call_skill_parses_fenced_json():
     assert out.regime == "SIDEWAYS"
 
 
+def test_cycle_drops_sell_entry():
+    # Spot paper trading is long-only: a SELL entry used to be opened as a long by the broker (F-27).
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from uuid import uuid4
+
+    from ..models import TradingSignal
+    from .hermes import run_hermes_cycle
+    from .schemas import RegimeResult, SafetyResult
+
+    regime = RegimeResult(symbol="BTCUSDT", regime="TRENDING_BULLISH", volatility_state="LOW",
+                          recommended_strategy_type="TREND_FOLLOWING", confidence=0.8)
+    safety = SafetyResult(asset_identifier="BTCUSDT", venue_type="BINANCE_SPOT", contract_safety_score=90,
+                          risk_classification="LOW", verdict="APPROVED")
+
+    def cycle(action):
+        signal = SignalResult(signal_id="s", symbol="BTCUSDT", strategy_type="TREND_FOLLOWING", action=action,
+                              entry_price=100, stop_loss=95, take_profit_1=110, take_profit_2=120,
+                              estimated_winrate_pct=60, confidence_score=0.9, rationale="r")
+        row = MagicMock(id=uuid4(), spread_pct=0, volume_24h_usd=0)  # the Token and MarketSnapshot lookups
+        session = MagicMock(exec=AsyncMock(return_value=MagicMock(first=MagicMock(return_value=row))),
+                            commit=AsyncMock(), refresh=AsyncMock())
+        with patch("src.agents.hermes.build_market_context", AsyncMock(return_value={"symbol": "BTCUSDT"})), \
+             patch("src.agents.hermes._call_skill", AsyncMock(side_effect=[regime, safety, signal])):
+            out = asyncio.run(run_hermes_cycle(session, None, "BTC"))
+        return out, [c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], TradingSignal)]
+
+    out, stored = cycle("SELL")
+    assert out is None and stored == [], "a SELL must not become a TradingSignal"
+    out, stored = cycle("BUY")
+    assert isinstance(out, TradingSignal) and out.action == "BUY" and stored == [out]
+
+
 if __name__ == "__main__":
     test_fallback_to_secondary_on_primary_500()
+    test_cycle_drops_sell_entry()
     test_call_skill_parses_fenced_json()
     test_schema_accepts_no_trade_with_null_prices()
     test_schema_rejects_out_of_contract_action()

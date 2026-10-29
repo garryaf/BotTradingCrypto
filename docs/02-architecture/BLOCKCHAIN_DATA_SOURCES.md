@@ -34,6 +34,14 @@ Untuk mengoptimalkan pengeluaran biaya pada fase MVP lokal (MacBook M1 Pro), sis
 
 ---
 
+### 2.1 Implementasi Aktual (audit 2026-10-26)
+- **RPC:** Helius bila `HELIUS_API_KEY` diisi, selain itu Solana public RPC (`config.solana_rpc_url`). Dipakai untuk `getSignaturesForAddress` (10 signature terbaru per wallet per polling 15 detik), `getTransaction`, dan `getAccountInfo` (jsonParsed) untuk cek mint/freeze authority token.
+- **Market data:** DEXScreener `GET https://api.dexscreener.com/tokens/v1/solana/{mint}` — pair dengan likuiditas USD terbesar yang `baseToken`-nya mint tersebut. Hanya dipanggil saat swap BUY baru dari wallet yang disetujui (bukan untuk riwayat). Birdeye belum dipakai.
+- **Keamanan token:** aman hanya bila akun mint dimiliki program SPL Token klasik dan `mintAuthority` serta `freezeAuthority` keduanya `null`. Mint Token-2022, error RPC, atau akun bukan-mint → tidak aman (fail-closed). LP burn dan konsentrasi holder belum diperiksa.
+- **Belum ada:** backfill riwayat 30 hari (pagination `before`), polling adaptif, WebSocket, credit budget tracker, dan circuit breaker RPC.
+
+---
+
 ## 3. Protokol Penarikan Data (Ingestion Protocols)
 
 ### 3.1 Polling Periodik Adaptif (Adaptive Polling)

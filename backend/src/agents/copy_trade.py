@@ -27,7 +27,13 @@ def validate_copy_trade_preconditions(
         return False, "WALLET_NOT_MONITORED"
 
     act = (action or "").upper()
-    if act not in ("BUY", "SELL"):
+    # Spot paper trading is long-only: a master SELL is an exit, never a new entry. A SELL signal used
+    # to be opened as a long by the broker (F-27).
+    # shortcut: master SELLs are ignored and our positions exit on their own SL/TP; upgrade by closing
+    # open positions on that token (COPY_TRADING_FLOWCHART.mmd SELL branch).
+    if act == "SELL":
+        return False, "SELL_NOT_MIRRORED"
+    if act != "BUY":
         return False, "IGNORED_ACTION"
 
     if price_usd <= Decimal(0):
@@ -77,15 +83,10 @@ async def create_copy_trade_signal(
     await session.commit()
     await session.refresh(run)
 
-    act = action.upper()
-    if act == "BUY":
-        stop_loss = (price_usd * Decimal("0.95")).quantize(Decimal("0.000001"))
-        tp1 = (price_usd * Decimal("1.075")).quantize(Decimal("0.000001"))
-        tp2 = (price_usd * Decimal("1.15")).quantize(Decimal("0.000001"))
-    else:
-        stop_loss = (price_usd * Decimal("1.05")).quantize(Decimal("0.000001"))
-        tp1 = (price_usd * Decimal("0.925")).quantize(Decimal("0.000001"))
-        tp2 = (price_usd * Decimal("0.85")).quantize(Decimal("0.000001"))
+    act = "BUY"  # validate_copy_trade_preconditions only lets BUYs through
+    stop_loss = (price_usd * Decimal("0.95")).quantize(Decimal("0.000001"))
+    tp1 = (price_usd * Decimal("1.075")).quantize(Decimal("0.000001"))
+    tp2 = (price_usd * Decimal("1.15")).quantize(Decimal("0.000001"))
 
     # Confidence derived from wallet score (0-100 -> 0.50-0.99)
     wallet_score = wallet.composite_score or Decimal(70)

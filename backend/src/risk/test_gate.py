@@ -121,6 +121,69 @@ def test_risk_per_trade_never_exceeds_cap_at_any_drawdown():
         assert outcome.risk_per_trade_check is True
 
 
+def test_solana_dex_signal_passes_with_dex_spread_and_volume():
+    # F-16: Solana DEX AMM pool with 0.64% spread (0.30% fee + 0.02% impact) passes under SOLANA_DEX_SIM limits
+    outcome = evaluate_risk(**{
+        **BASELINE,
+        "spread_pct": Decimal("0.64"),
+        "volume_24h_usd": Decimal("500000"),
+        "venue": "SOLANA_DEX_SIM",
+    })
+    assert outcome.passed, outcome.rejection_reasons
+    assert outcome.rejection_reasons == []
+    # Fee must use DEX taker fee (0.30%)
+    expected_fee = (outcome.quantity * BASELINE["entry_price"]) * Decimal("0.0030")
+    assert abs(outcome.fee_usd - expected_fee) < Decimal("0.01")
+
+
+def test_solana_dex_signal_excessive_spread_rejected():
+    # F-16: Solana DEX pool with 3.0% spread exceeds max_dex_spread_pct (2.5%) -> fail-closed
+    outcome = evaluate_risk(**{
+        **BASELINE,
+        "spread_pct": Decimal("3.0"),
+        "volume_24h_usd": Decimal("500000"),
+        "venue": "SOLANA_DEX_SIM",
+    })
+    assert not outcome.passed
+    assert "SPREAD_OR_LIQUIDITY_INADEQUATE" in outcome.rejection_reasons
+
+
+def test_solana_dex_signal_low_volume_rejected():
+    # F-16: Solana DEX pool with $5,000 volume falls below min_dex_24h_volume_usd ($20,000) -> fail-closed
+    outcome = evaluate_risk(**{
+        **BASELINE,
+        "spread_pct": Decimal("0.64"),
+        "volume_24h_usd": Decimal("5000"),
+        "venue": "SOLANA_DEX_SIM",
+    })
+    assert not outcome.passed
+    assert "SPREAD_OR_LIQUIDITY_INADEQUATE" in outcome.rejection_reasons
+
+
+def test_insufficient_rr_rejected():
+    # F-17: TP1 = 105 -> dist=5, risk_unit=5, R:R=1.0 < 1.5 -> INSUFFICIENT_RISK_REWARD
+    outcome = evaluate_risk(**{**BASELINE, "take_profit_1": Decimal(105)})
+    assert not outcome.passed
+    assert outcome.rejection_reasons == ["INSUFFICIENT_RISK_REWARD"]
+    assert outcome.stop_loss_check is False
+
+
+def test_exact_minimum_rr_passes():
+    # F-17: TP1 = 107.5 -> dist=7.5, risk_unit=5, R:R=1.5 = threshold -> passes
+    outcome = evaluate_risk(**{**BASELINE, "take_profit_1": Decimal("107.5")})
+    assert outcome.passed
+    assert outcome.rejection_reasons == []
+    assert outcome.stop_loss_check is True
+
+
+def test_rr_check_without_stop_loss_does_not_double_reject():
+    # F-17: Invalid SL -> INVALID_STOP_LOSS, not double-flagging INSUFFICIENT_RISK_REWARD
+    outcome = evaluate_risk(**{**BASELINE, "stop_loss": BASELINE["entry_price"]})
+    assert not outcome.passed
+    assert "INVALID_STOP_LOSS" in outcome.rejection_reasons
+    assert "INSUFFICIENT_RISK_REWARD" not in outcome.rejection_reasons
+
+
 if __name__ == "__main__":
     test_valid_signal_passes_every_gate()
     test_missing_stop_loss_rejected()
@@ -135,4 +198,10 @@ if __name__ == "__main__":
     test_insufficient_cash_for_min_lot_rejected()
     test_negative_expectancy_rejected()
     test_risk_per_trade_never_exceeds_cap_at_any_drawdown()
+    test_solana_dex_signal_passes_with_dex_spread_and_volume()
+    test_solana_dex_signal_excessive_spread_rejected()
+    test_solana_dex_signal_low_volume_rejected()
+    test_insufficient_rr_rejected()
+    test_exact_minimum_rr_passes()
+    test_rr_check_without_stop_loss_does_not_double_reject()
     print("ok")

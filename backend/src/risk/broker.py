@@ -45,5 +45,5 @@ def simulate_fills(
 def fee_for_venue(notional_usd: Decimal, venue: str, taker_fee_pct: Decimal) -> tuple[Decimal, Decimal]:
     """Returns (fee_usd, gas_fee_native)."""
     if venue == "SOLANA_DEX_SIM":
-        return Decimal(0), SOLANA_GAS_FEE_NATIVE
+        return notional_usd * Decimal("0.0030"), SOLANA_GAS_FEE_NATIVE
     return notional_usd * taker_fee_pct, Decimal(0)

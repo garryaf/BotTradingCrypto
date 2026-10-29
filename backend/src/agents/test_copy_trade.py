@@ -61,6 +61,13 @@ def test_validate_preconditions_low_liquidity():
     assert reason == "INSUFFICIENT_POOL_LIQUIDITY"
 
 
+def test_validate_preconditions_sell_not_mirrored():
+    # A master SELL is an exit; mirroring it as a new entry opened a long (F-27).
+    valid, reason = validate_copy_trade_preconditions(_mock_wallet(), _mock_token(), "SELL", Decimal("100.00"))
+    assert not valid
+    assert reason == "SELL_NOT_MIRRORED"
+
+
 def test_validate_preconditions_success():
     wallet = _mock_wallet(status="ACTIVE_MONITORED")
     token = _mock_token()
@@ -97,6 +104,7 @@ if __name__ == "__main__":
     test_validate_preconditions_unmonitored_wallet()
     test_validate_preconditions_unsafe_token()
     test_validate_preconditions_low_liquidity()
+    test_validate_preconditions_sell_not_mirrored()
     test_validate_preconditions_success()
     test_create_copy_trade_signal_success()
     print("ok")

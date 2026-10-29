@@ -45,7 +45,7 @@ from ..models import (
 )
 from .broker import fee_for_venue, simulate_fills
 from .engine_client import call_risk_engine
-from .gate import BINANCE_TAKER_FEE_PCT, evaluate_risk
+from .gate import BINANCE_TAKER_FEE_PCT, MAX_OPEN_POSITIONS, MIN_24H_VOLUME_USD, evaluate_risk
 from .ledger import next_snapshot
 
 logger = logging.getLogger("risk.engine")
@@ -57,6 +57,7 @@ CIRCUIT_BREAKER_KEY = "CIRCUIT_BREAKER_ACTIVE"
 PAUSED_KEY = "TRADING_PAUSED"
 
 OPEN_POSITION_STATUSES = ["OPEN", "PARTIALLY_CLOSED"]
+UNKNOWN_SPREAD_PCT = Decimal(100)  # percent; far above any max_spread_pct, so the gate fails
 
 
 def _account_paused_key(user_id: UUID) -> str:
@@ -182,8 +183,35 @@ async def _write_snapshot(
         await _set_account_circuit_breaker(session, user_id, True, f"Drawdown {fields['current_drawdown_pct']:.2f}% >= limit")
 
 
+def _spread_or_fail(market: MarketSnapshot) -> Decimal:
+    """A spread is only known from a bid/ask quote. DEX pool snapshots (DEXScreener) have none, and their
+    spread_pct still reads 0.0000 (the column's server default fills an omitted/None value), so the spread
+    gate used to pass them as zero. An unknown spread must fail the gate, in Python and in the Rust payload."""
+    if market.bid_price is None or market.ask_price is None or market.spread_pct is None:
+        return UNKNOWN_SPREAD_PCT
+    return market.spread_pct
+
+
+def risk_limits(venue: str = "Binance_SPOT_SIM") -> dict:
+    """Thresholds the gates enforce, in payload units: percent for spread/loss/drawdown, fraction
+    for risk/trade. Single source for the Rust engine payload and the dashboard labels."""
+    is_dex = venue == "SOLANA_DEX_SIM"
+    max_spread = float(settings.max_dex_spread_pct * 100) if is_dex else float(settings.max_spread_pct * 100)
+    min_vol = float(settings.min_dex_24h_volume_usd) if is_dex else float(MIN_24H_VOLUME_USD)
+    return {
+        "max_risk_per_trade_pct": float(settings.max_risk_per_trade_pct),
+        "daily_loss_limit_pct": float(settings.daily_loss_limit_pct * 100),
+        "max_drawdown_limit_pct": float(settings.max_drawdown_limit_pct * 100),
+        "max_spread_pct": max_spread,
+        "min_24h_volume_usd": min_vol,
+        "max_open_positions": MAX_OPEN_POSITIONS,
+        "data_freshness_max_age_sec": settings.data_freshness_max_age_sec,
+        "min_risk_reward_ratio": float(settings.min_risk_reward_ratio),
+    }
+
+
 def _signal_candidate(signal: TradingSignal, market: MarketSnapshot, portfolio: PortfolioSnapshot,
-                      open_positions: int, outcome) -> dict:
+                      open_positions: int, outcome, venue: str = "Binance_SPOT_SIM") -> dict:
     """SignalCandidate payload — RUST_ENGINE_INTEGRATION_SPEC.md §4.1."""
     # shortcut: Decimal -> float for the JSON contract, fine for a pass/fail verdict; switch to strings if the engine ever returns money.
     return {
@@ -196,13 +224,19 @@ def _signal_candidate(signal: TradingSignal, market: MarketSnapshot, portfolio: 
         "suggested_take_profit_2": float(signal.suggested_take_profit_2),
         "recommended_allocation_pct": float(outcome.risk_pct_used),
         "confidence_score": float(signal.confidence_score),
+        # Rust engine mirrors gate.py's fee-aware expectancy (RUST_ENGINE_INTEGRATION_SPEC parity).
+        "estimated_winrate_pct": float(signal.estimated_winrate_pct or 50),
+        "dollar_risk": float(outcome.dollar_risk),
+        "fee_usd": float(outcome.fee_usd),
+        # Single source of truth: the engine enforces THESE limits, not its own hardcoded copy.
+        "limits": risk_limits(venue),
         "snapshot": {
             "price_usd": float(market.price_usd),
             "bid_price": float(market.bid_price or market.price_usd),
             "ask_price": float(market.ask_price or market.price_usd),
-            "spread_pct": float(market.spread_pct or 0),
+            "spread_pct": float(_spread_or_fail(market)),
             "snapshot_age_seconds": int((datetime.now(timezone.utc) - market.snapshot_time).total_seconds()),
-            "pool_liquidity_usd": float(market.volume_24h_usd or 0),
+            "pool_liquidity_usd": float(market.volume_24h_usd or market.pool_liquidity_usd or 0),
         },
         "portfolio": {
             "total_equity_usd": float(portfolio.total_equity_usd),
@@ -218,9 +252,22 @@ def _signal_candidate(signal: TradingSignal, market: MarketSnapshot, portfolio: 
 
 async def _process_signal(
     session, signal: TradingSignal, user_id: UUID, client: httpx.AsyncClient | None = None
-) -> None:
+) -> bool:
     """Evaluate + (maybe) execute one shared signal against one account's own numbers.
+    Returns True once this account has a verdict on the signal, False if it can't be judged yet.
     Never mutates signal.status — the caller owns that once it's offered to every account."""
+    # Idempotent: one verdict (so at most one order) per account per signal, even when the signal
+    # is offered again after a crash/restart that happened before it was marked DISPATCHED.
+    # shortcut: app-level check, enough for the single risk loop; add a unique (user_id,
+    # trading_signal_id) constraint on risk_checks if this loop ever runs in more than one process.
+    already_decided = (
+        await session.exec(
+            select(RiskCheck.id).where(RiskCheck.trading_signal_id == signal.id, RiskCheck.user_id == user_id)
+        )
+    ).first()
+    if already_decided:
+        return True
+
     token = await session.get(Token, signal.token_id)
     market = (
         await session.exec(
@@ -230,11 +277,12 @@ async def _process_signal(
         )
     ).first()
     if market is None:
-        return  # no market data yet for this token — leave PENDING until ingestion catches up
+        return False  # no market data yet for this token — leave PENDING until ingestion catches up
 
     portfolio = await get_latest_portfolio(session, user_id)
     circuit_breaker_active = await is_account_paused(session, user_id)
     open_positions = await count_open_positions(session, user_id)
+    venue = _execution_venue(token.chain)
 
     outcome = evaluate_risk(
         action=signal.action,
@@ -247,19 +295,20 @@ async def _process_signal(
         cash_balance_usd=portfolio.cash_balance_usd,
         daily_loss_pct=portfolio.daily_loss_pct,
         current_drawdown_pct=portfolio.current_drawdown_pct,
-        spread_pct=market.spread_pct or Decimal(0),
+        spread_pct=_spread_or_fail(market),
         volume_24h_usd=market.volume_24h_usd or Decimal(0),
         snapshot_time=market.snapshot_time,
         is_stale=market.is_stale,
         open_positions_count=open_positions,
         circuit_breaker_active=circuit_breaker_active,
         min_lot_size=token.min_lot_size,
+        venue=venue,
     )
 
     # Engine verdict is ANDed with the local one: sizing stays in Python (the IPC contract returns no sizing).
     if settings.engine_url:
         engine_passed, engine_reasons = await call_risk_engine(
-            _signal_candidate(signal, market, portfolio, open_positions, outcome), client
+            _signal_candidate(signal, market, portfolio, open_positions, outcome, venue=venue), client
         )
         if not engine_passed:
             outcome.passed = False
@@ -290,7 +339,7 @@ async def _process_signal(
     await session.refresh(risk_check)
 
     if not outcome.passed:
-        return
+        return True
 
     venue = _execution_venue(token.chain)
     fills = simulate_fills(
@@ -358,6 +407,14 @@ async def _process_signal(
         open_positions_value_usd=portfolio.open_positions_value_usd + total_notional,
         realized_pnl_delta=-total_fee,
     )
+    return True
+
+
+async def _opening_order_id(session, position: Position) -> UUID | None:
+    """Exit fills are booked against the order that opened the position: paper_orders.risk_check_id is
+    NOT NULL, so an exit can't have an order of its own. Booking them on position.id broke the
+    paper_trades FK on every TP/SL exit, so no position ever closed (F-26)."""
+    return (await session.exec(select(PaperTrade.paper_order_id).where(PaperTrade.position_id == position.id))).first()
 
 
 async def _monitor_positions(session) -> None:
@@ -376,6 +433,10 @@ async def _monitor_positions(session) -> None:
         realized_delta = Decimal(0)
 
         for pos in user_positions:
+            order_id = await _opening_order_id(session, pos)
+            if order_id is None:  # no entry fill was recorded (crash mid-execution, F-18): nothing to exit
+                logger.error("position %s has no opening order; skipped", pos.id)
+                continue
             market = (
                 await session.exec(
                     select(MarketSnapshot).where(MarketSnapshot.token_id == pos.token_id)
@@ -387,14 +448,18 @@ async def _monitor_positions(session) -> None:
                 continue
             price = market.price_usd
 
+            pos_token = await session.get(Token, pos.token_id)
+            venue = _execution_venue(pos_token.chain) if pos_token else "Binance_SPOT_SIM"
+
             if not pos.is_tp1_hit and price >= pos.take_profit_1:
                 close_qty = pos.current_quantity / 2
                 proceeds = close_qty * price
-                fee_usd, _ = fee_for_venue(proceeds, "Binance_SPOT_SIM", BINANCE_TAKER_FEE_PCT)
+                fee_usd, gas_native = fee_for_venue(proceeds, venue, BINANCE_TAKER_FEE_PCT)
                 pnl = proceeds - fee_usd - (close_qty * pos.average_entry_price)
                 session.add(
-                    PaperTrade(paper_order_id=pos.id, position_id=pos.id, executed_quantity=close_qty,
-                               executed_price=price, transaction_fee_usd=fee_usd, execution_venue="Binance_SPOT_SIM")
+                    PaperTrade(paper_order_id=order_id, position_id=pos.id, executed_quantity=close_qty,
+                               executed_price=price, transaction_fee_usd=fee_usd, gas_fee_native=gas_native,
+                               execution_venue=venue)
                 )
                 pos.current_quantity -= close_qty
                 pos.is_tp1_hit = True
@@ -405,11 +470,12 @@ async def _monitor_positions(session) -> None:
                 realized_delta += pnl
             elif price >= pos.take_profit_2 or price <= pos.current_stop_loss:
                 proceeds = pos.current_quantity * price
-                fee_usd, _ = fee_for_venue(proceeds, "Binance_SPOT_SIM", BINANCE_TAKER_FEE_PCT)
+                fee_usd, gas_native = fee_for_venue(proceeds, venue, BINANCE_TAKER_FEE_PCT)
                 pnl = proceeds - fee_usd - (pos.current_quantity * pos.average_entry_price)
                 session.add(
-                    PaperTrade(paper_order_id=pos.id, position_id=pos.id, executed_quantity=pos.current_quantity,
-                               executed_price=price, transaction_fee_usd=fee_usd, execution_venue="Binance_SPOT_SIM")
+                    PaperTrade(paper_order_id=order_id, position_id=pos.id, executed_quantity=pos.current_quantity,
+                               executed_price=price, transaction_fee_usd=fee_usd, gas_fee_native=gas_native,
+                               execution_venue=venue)
                 )
                 pos.realized_pnl_usd += pnl
                 cash_inflow += proceeds - fee_usd
@@ -433,6 +499,30 @@ async def _monitor_positions(session) -> None:
         )
 
 
+async def _dispatch_pending(session, client: httpx.AsyncClient | None = None) -> None:
+    """Offer every PENDING signal to every unpaused account. A signal becomes DISPATCHED only once
+    an account actually decided on it; with no market data it stays PENDING until it expires."""
+    user_ids = (await session.exec(select(BinanceCredential.user_id))).all()
+    pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
+    for signal in pending:
+        decided = False
+        for user_id in user_ids:
+            if await is_account_paused(session, user_id):
+                continue
+            try:
+                decided = await _process_signal(session, signal, user_id, client) or decided
+            except Exception:
+                logger.exception("risk engine failed processing signal %s for user %s", signal.id, user_id)
+                # A failed write leaves the session unusable: the next query would raise outside this
+                # try and kill the loop. Roll back and end this round; the retry is safe (idempotent),
+                # and a signal that keeps failing only blocks dispatch until it expires (5 min).
+                await session.rollback()
+                return
+        if decided:
+            signal.status = "DISPATCHED"
+            await session.commit()
+
+
 async def run_risk_engine_loop() -> None:
     # One pooled client so the 10ms engine budget isn't spent on a fresh TCP handshake per signal.
     async with httpx.AsyncClient() as client:
@@ -440,21 +530,7 @@ async def run_risk_engine_loop() -> None:
             async with async_session_factory() as session:
                 await _expire_stale_signals(session)
                 if not await is_paused(session):
-                    user_ids = (await session.exec(select(BinanceCredential.user_id))).all()
-                    pending = (await session.exec(select(TradingSignal).where(TradingSignal.status == "PENDING"))).all()
-                    for signal in pending:
-                        for user_id in user_ids:
-                            if await is_account_paused(session, user_id):
-                                continue
-                            try:
-                                await _process_signal(session, signal, user_id, client)
-                            except Exception:
-                                logger.exception(
-                                    "risk engine failed processing signal %s for user %s", signal.id, user_id
-                                )
-                        if user_ids:
-                            signal.status = "DISPATCHED"
-                            await session.commit()
+                    await _dispatch_pending(session, client)
                 try:
                     await _monitor_positions(session)
                 except Exception:

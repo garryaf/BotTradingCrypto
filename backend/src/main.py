@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from .agents.hermes import run_hermes_loop
+from .agents.wallet_scorer import run_wallet_scoring_loop
 from .api.admin_routes import router as admin_router
 from .api.auth_routes import router as auth_router
 from .api.routes import router as api_router
@@ -16,6 +18,26 @@ from .ingestion.aggregator import run_aggregator
 from .ingestion.binance import run_binance_ingestion
 from .ingestion.solana import run_solana_ingestion
 from .risk.engine import run_risk_engine_loop
+
+logger = logging.getLogger("main")
+
+# Background loops, kept so /health can say which are still alive (GAP-14): a loop that dies
+# silently stops ingestion or stop-loss monitoring while the API keeps answering "ok".
+_tasks: list[asyncio.Task] = []
+
+
+def _task_state(task: asyncio.Task) -> str:
+    """running | exited (returned on its own, e.g. idle because unconfigured) | crashed | cancelled."""
+    if not task.done():
+        return "running"
+    if task.cancelled():
+        return "cancelled"
+    return "crashed" if task.exception() else "exited"
+
+
+def _log_crash(task: asyncio.Task) -> None:
+    if not task.cancelled() and task.exception():
+        logger.error("background loop %s crashed", task.get_name(), exc_info=task.exception())
 
 
 @asynccontextmanager
@@ -31,17 +53,26 @@ async def lifespan(_: FastAPI):
     if not settings.jwt_secret_key or not settings.field_encryption_key:
         raise RuntimeError("JWT_SECRET_KEY and FIELD_ENCRYPTION_KEY must be set (see .env.example).")
 
-    tasks = [
-        asyncio.create_task(run_binance_ingestion()),
-        asyncio.create_task(run_solana_ingestion()),
-        asyncio.create_task(run_aggregator()),
-        asyncio.create_task(run_hermes_loop()),
-        asyncio.create_task(run_risk_engine_loop()),
-        asyncio.create_task(run_telegram_bot()),
-    ]
+    loops = {
+        "binance_ingestion": run_binance_ingestion,
+        "solana_ingestion": run_solana_ingestion,
+        "aggregator": run_aggregator,
+        "hermes": run_hermes_loop,
+        "wallet_scoring": run_wallet_scoring_loop,
+        "risk_engine": run_risk_engine_loop,
+        "telegram_bot": run_telegram_bot,
+    }
+    for name, loop in loops.items():
+        task = asyncio.create_task(loop(), name=name)
+        task.add_done_callback(_log_crash)
+        _tasks.append(task)
     yield
-    for task in tasks:
+    # Graceful shutdown: cancel then await so each loop's `async with` (DB session,
+    # httpx client) actually closes instead of being dropped mid-flight (GAP-16).
+    for task in _tasks:
         task.cancel()
+    await asyncio.gather(*_tasks, return_exceptions=True)
+    _tasks.clear()
 
 
 app = FastAPI(title="AUTO-TRADE-AA Backend", lifespan=lifespan)
@@ -67,9 +98,12 @@ async def health() -> dict:
         db_status = "connected"
     except Exception:
         db_status = "disconnected"
+    tasks = {task.get_name(): _task_state(task) for task in _tasks}
+    degraded = db_status != "connected" or "crashed" in tasks.values()
     return {
-        "status": "ok",
+        "status": "degraded" if degraded else "ok",
         "db": db_status,
         "env": settings.app_env,
         "live_trading": settings.live_trading_enabled,
+        "tasks": tasks,
     }

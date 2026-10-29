@@ -30,9 +30,9 @@ def test_strategy_never_sees_future_bars():
     bars = _make_bars(300)
     seen_lengths: list[int] = []
 
-    def spy(closes_so_far):
+    def spy(closes_so_far, **kwargs):
         seen_lengths.append(len(closes_so_far))
-        return real_generate_signal(closes_so_far)
+        return real_generate_signal(closes_so_far, **kwargs)
 
     original = engine_module.generate_signal
     engine_module.generate_signal = spy

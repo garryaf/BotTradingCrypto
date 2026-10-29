@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     daily_loss_limit_pct: Decimal = Decimal("0.02")
     max_drawdown_limit_pct: Decimal = Decimal("0.08")
     max_spread_pct: Decimal = Decimal("0.0008")
+    max_dex_spread_pct: Decimal = Decimal("0.025")  # 2.50% max spread for Solana AMM pools
+    min_dex_24h_volume_usd: Decimal = Decimal("20000.00")  # $20k min 24h volume for DEX pools (matches MIN_POOL_LIQUIDITY_USD)
+    dex_pool_base_fee_pct: Decimal = Decimal("0.0030")  # 0.30% standard Raydium/Orca AMM swap fee
+    min_risk_reward_ratio: Decimal = Decimal("1.5")  # FR-RSK-01 Gate 6: minimum 1:1.5 Risk:Reward ratio
 
     # Rust Risk Gate (RUST_ENGINE_INTEGRATION_SPEC.md §6.1). Empty = in-process Python gate only.
     engine_url: str = ""

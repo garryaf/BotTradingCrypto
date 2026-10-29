@@ -10,6 +10,31 @@ Dokumen ini mendefinisikan desain arsitektur sistem multi-agent bertenaga kecerd
 
 ---
 
+## 0. Implementasi Aktual (diverifikasi audit 2026-10-26)
+
+> Bagian 1–5 di bawah adalah **desain target**. Kode saat ini menjalankan versi yang lebih sederhana; tabel ini memetakan setiap peran ke kode yang benar-benar berjalan.
+
+Hermes adalah **satu orchestrator** (`backend/src/agents/hermes.py`, `run_hermes_loop`, siklus 300 detik untuk BTCUSDT/ETHUSDT/SOLUSDT) yang menjalankan **tiga panggilan LLM berurutan**. Tiap panggilan memakai prompt dari `.agents/skills/<skill>/SKILL.md` dan outputnya wajib lolos skema Pydantic (`agents/schemas.py`); output yang gagal skema dicatat (`llm_requests.status_code = 422`) dan siklus untuk simbol itu dihentikan. Risiko dan eksekusi **bukan** agen LLM — keduanya kode deterministik.
+
+| Peran | Implementasi aktual | Jenis | Menulis ke |
+|---|---|---|---|
+| Analisis pasar (Market Context) | skill `market-regime-detection` → `RegimeResult`; konteks EMA20/50 + RSI14 (`agents/indicators.py`) dari candle M1 | LLM + deterministik | `llm_requests` |
+| Keamanan token | skill `token-and-contract-safety` → `SafetyResult`; konteks hanya aturan Binance Spot (status, spread, volume 24h) | LLM | `llm_requests` |
+| Sintesis sinyal (Strategy Signal) | skill `signal-scoring-hybrid` → `SignalResult` (BUY/SELL/HOLD/NO_TRADE + level harga) | LLM | `llm_requests`, `trading_signals` (PENDING) |
+| Trader profiling / discovery | Kandidat dimasukkan operator (`POST /api/v1/admin/wallets`); riwayat swap dikumpulkan `ingestion/solana.py`; `agents/wallet_scorer.py` (`run_wallet_scoring_loop`, 300 detik) mempromosikan skor ≥ 70 ke `PENDING_REVIEW`; operator menyetujui (`PATCH /api/v1/admin/wallets/{address}`) — rumus + keputusan manusia, bukan LLM | deterministik | `wallets` |
+| Copy-trade | `agents/copy_trade.py`, dipicu `ingestion/solana.py` untuk swap **BUY** baru dari wallet `ACTIVE_MONITORED`; otoritas mint dibaca on-chain, harga & likuiditas dari DEXScreener. SELL tidak disalin | deterministik | `agent_runs`, `trading_signals` (PENDING), `market_snapshots` |
+| Manajemen risiko | `risk/gate.py` (9 pintu + circuit breaker), opsional dikonfirmasi `engine/` (Rust) dengan ambang yang sama (dikirim di payload) | deterministik | `risk_checks` |
+| Eksekusi | `risk/engine.py` + `risk/broker.py` — **paper broker saja** | deterministik | `paper_orders`, `paper_trades`, `positions`, `portfolio_snapshots` |
+
+Selisih terhadap desain target:
+- Skill `risk-gate-validation` dan `position-sizing-compounding` tidak dimuat runtime; aturannya diimplementasikan langsung di `risk/gate.py` dan `risk/sizing.py`.
+- Belum ada: berita/sentimen sebagai sumber data, audit on-chain token SPL (mint/freeze authority, LP, holder), dan state graph. Alur Hermes linear dan tanpa resume; siklus yang gagal di tengah diulang dari awal pada siklus berikutnya.
+- Satu `agent_runs` per siklus; ketiga panggilan LLM ditautkan lewat `llm_requests.agent_run_id`, dan sinyal lewat `trading_signals.agent_run_id`.
+
+Batas otoritas di §4 berlaku penuh dan terverifikasi: agen hanya dapat membuat `trading_signals` berstatus PENDING. Order hanya dibuat Risk Engine setelah semua pintu lolos, maksimal satu verdict (dan satu order) per akun per sinyal.
+
+---
+
 ## 1. Topologi Hermes Multi-Agent Workflow
 
 ```

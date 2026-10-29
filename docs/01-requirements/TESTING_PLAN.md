@@ -64,7 +64,7 @@ Setiap perubahan kode (*pull request*) wajib memenuhi piramida pengujian berikut
   - **Pencegahan Look-Ahead Bias:** Memverifikasi bahwa mesin backtesting hanya membaca data dengan timestamp $\le t_{\text{simulasi}}$.
 
 ### 2.5 Drill Pengujian Darurat (Kill Switch Drill)
-Mengacu pada spesifikasi [LIVE_TRADING_SAFETY_GATE.md](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/05-security/LIVE_TRADING_SAFETY_GATE.md) Kriteria 3:
+Mengacu pada spesifikasi [LIVE_TRADING_SAFETY_GATE.md](../../docs/05-security/LIVE_TRADING_SAFETY_GATE.md) Kriteria 3:
 - **Prosedur Pengujian:**
   1. Sistem menjalankan aliran pengiriman sinyal buatan secara kontinu (10 sinyal/detik).
   2. Pemicu darurat diaktifkan (via perintah Telegram `/kill` atau tombol web).
@@ -118,7 +118,7 @@ Sistem AUTO-TRADE-AA menggunakan AI agent Hermes (LLM) untuk menghasilkan sinyal
 
 ### 5.2 Strategi Proxy Deterministik
 
-**Implementasi:** [`backend/src/backtest/strategy.py`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/backtest/strategy.py)
+**Implementasi:** [`backend/src/backtest/strategy.py`](../../backend/src/backtest/strategy.py)
 
 | Parameter | Nilai | Sumber |
 |---|---|---|
@@ -133,7 +133,7 @@ Strategi ini **hanya** merepresentasikan Trend Following — bukan Momentum Brea
 
 ### 5.3 Metodologi Walk-Forward 70/30
 
-**Implementasi:** [`backend/src/backtest/engine.py:43`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/backend/src/backtest/engine.py#L43)
+**Implementasi:** [`backend/src/backtest/engine.py:43`](../../backend/src/backtest/engine.py#L43)
 
 ```python
 split_idx = int(len(bars) * 0.7)  # 70% in-sample / 30% out-of-sample, chronological

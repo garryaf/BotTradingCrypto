@@ -36,7 +36,7 @@ Semua token warna didefinisikan sebagai CSS custom properties dan Tailwind class
 
 ### 3.1 Aturan State — Kapan Bull, Kapan Bear
 
-**Sumber keputusan:** [`EquityHero.tsx:87`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/EquityHero.tsx#L87)
+**Sumber keputusan:** [`EquityHero.tsx:87`](../../frontend/src/components/EquityHero.tsx#L87)
 
 ```typescript
 const dailyProfit = data.daily_realized_pnl_usd >= 0;
@@ -51,7 +51,7 @@ const dailyProfit = data.daily_realized_pnl_usd >= 0;
 
 ### 3.2 Komponen `ProfitLossMascot`
 
-**File:** [`frontend/src/components/ProfitLossMascot.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/ProfitLossMascot.tsx)  
+**File:** [`frontend/src/components/ProfitLossMascot.tsx`](../../frontend/src/components/ProfitLossMascot.tsx)  
 **Props:** `{ positive: boolean }`
 
 **Perilaku animasi (Framer Motion):**
@@ -72,7 +72,7 @@ scale: { type: "spring", stiffness: 260, damping: 16 }
 
 #### `BullMascot` — Banteng Menyerang
 
-**File:** [`frontend/src/components/mascots/BullMascot.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/mascots/BullMascot.tsx)  
+**File:** [`frontend/src/components/mascots/BullMascot.tsx`](../../frontend/src/components/mascots/BullMascot.tsx)  
 **ViewBox:** `0 0 220 220`  
 **Fill:** `currentColor` (diwarisi dari class `text-profit`)
 
@@ -91,7 +91,7 @@ scale: { type: "spring", stiffness: 260, damping: 16 }
 
 #### `BearMascot` — Beruang Murung
 
-**File:** [`frontend/src/components/mascots/BearMascot.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/mascots/BearMascot.tsx)  
+**File:** [`frontend/src/components/mascots/BearMascot.tsx`](../../frontend/src/components/mascots/BearMascot.tsx)  
 **ViewBox:** `0 0 220 220`  
 **Fill:** `currentColor` (diwarisi dari class `text-loss`)
 
@@ -105,7 +105,7 @@ scale: { type: "spring", stiffness: 260, damping: 16 }
 
 ## 4. Komponen `PnlGlow`
 
-**File:** [`frontend/src/components/PnlGlow.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/PnlGlow.tsx)  
+**File:** [`frontend/src/components/PnlGlow.tsx`](../../frontend/src/components/PnlGlow.tsx)  
 **Props:** `{ positive: boolean; intensity?: "lg" | "sm"; children: ReactNode }`
 
 **Formula glow (3 layer):**
@@ -130,7 +130,7 @@ Efek napas berjalan selaras dengan bounce dan glow drop-shadow maskot (durasi 2.
 
 ## 5. Komponen `ProfitLossSplash`
 
-**File:** [`frontend/src/components/ProfitLossSplash.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/ProfitLossSplash.tsx)  
+**File:** [`frontend/src/components/ProfitLossSplash.tsx`](../../frontend/src/components/ProfitLossSplash.tsx)  
 **Trigger:** Muncul **sekali saja** saat koneksi backend pertama kali berhasil (`data.connected` berubah dari `false → true`).
 
 **Durasi:** 3.200ms, lalu auto-dismiss.
@@ -150,7 +150,7 @@ if (data?.connected && !hasShownSplash.current) {
 
 ## 6. Komponen `CountUp`
 
-**File:** [`frontend/src/components/CountUp.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/CountUp.tsx)  
+**File:** [`frontend/src/components/CountUp.tsx`](../../frontend/src/components/CountUp.tsx)  
 **Props:** `{ value: number; format: (n: number) => string }`
 
 Menampilkan angka ekuitas dengan animasi count-up saat nilai berubah. Digunakan di `EquityHero` untuk nilai `equity_usd`.
@@ -159,8 +159,8 @@ Menampilkan angka ekuitas dengan animasi count-up saat nilai berubah. Digunakan 
 
 ## 7. Komponen `TickerStrip`
 
-**File:** [`frontend/src/components/TickerStrip.tsx`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/components/TickerStrip.tsx)  
-**Sumber data:** [`frontend/src/lib/binance.ts`](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/frontend/src/lib/binance.ts) — WebSocket Binance Spot ticker stream.
+**File:** [`frontend/src/components/TickerStrip.tsx`](../../frontend/src/components/TickerStrip.tsx)  
+**Sumber data:** [`frontend/src/lib/binance.ts`](../../frontend/src/lib/binance.ts) — WebSocket Binance Spot ticker stream.
 
 Strip harga bergerak horizontal di bagian atas dashboard, menampilkan harga real-time pasangan yang dipantau.
 

@@ -1,7 +1,7 @@
 """REST API for the Web Dashboard — ROADMAP.md TASK-5.2/5.3."""
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,8 +9,8 @@ from ..auth.dependencies import get_current_admin, get_current_user
 from ..backtest.data import fetch_historical_bars
 from ..backtest.engine import run_backtest
 from ..db import get_session
-from ..models import PortfolioSnapshot, Position, RiskCheck, TradingSignal, User
-from ..risk.engine import get_latest_portfolio
+from ..models import PortfolioSnapshot, Position, RiskCheck, TradingSignal, User, Wallet
+from ..risk.engine import get_latest_portfolio, risk_limits
 from . import control as control_actions
 
 router = APIRouter(prefix="/api/v1")
@@ -74,7 +74,8 @@ async def get_positions(user: User = Depends(get_current_user), session: AsyncSe
 
 
 @router.get("/signals")
-async def get_signals(session: AsyncSession = Depends(get_session)):
+async def get_signals(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    # Signals are shared market analysis (no user_id column); gate on auth, not ownership.
     rows = (await session.exec(select(TradingSignal).order_by(TradingSignal.generated_at.desc()).limit(30))).all()
     return [
         {
@@ -87,6 +88,24 @@ async def get_signals(session: AsyncSession = Depends(get_session)):
             "generated_at": s.generated_at,
         }
         for s in rows
+    ]
+
+
+@router.get("/wallets")
+async def get_wallets(user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    """Scored copy-trade candidate wallets (FR-WLT-03). Highest composite score first."""
+    rows = (await session.exec(select(Wallet).order_by(Wallet.composite_score.desc()).limit(50))).all()
+    return [
+        {
+            "address": w.address,
+            "status": w.status,
+            "composite_score": w.composite_score,
+            "win_rate_pct": w.win_rate_pct,
+            "profit_factor": w.profit_factor,
+            "net_pnl_usd": w.net_pnl_usd,
+            "last_active_at": w.last_active_at,
+        }
+        for w in rows
     ]
 
 
@@ -115,7 +134,8 @@ async def get_risk_status(user: User = Depends(get_current_user), session: Async
             "rejection_reasons": latest_check.rejection_reasons,
             "evaluated_at": latest_check.evaluated_at,
         }
-    return {**status, "latest_check": gates}
+    # limits: the dashboard labels read the same thresholds the gates enforce instead of hardcoding them.
+    return {**status, "latest_check": gates, "limits": risk_limits()}
 
 
 @router.post("/control/kill")
@@ -154,7 +174,12 @@ async def control_account_status(user: User = Depends(get_current_user), session
 
 
 @router.get("/backtest/run")
-async def backtest_run(symbol: str = "BTCUSDT", days: int = 60, interval: str = "1h"):
+async def backtest_run(
+    symbol: str = "BTCUSDT",
+    days: int = Query(60, ge=1, le=365),  # bound the outbound historical fetch (F-03)
+    interval: str = "1h",
+    user: User = Depends(get_current_user),
+):
     """ROADMAP.md TASK-6.1/6.2 — on-demand, not persisted (no backtest table in DATA_DICTIONARY.md)."""
     bars = await fetch_historical_bars(symbol, interval=interval, days=days)
     report = run_backtest(bars, initial_capital=Decimal(10000))

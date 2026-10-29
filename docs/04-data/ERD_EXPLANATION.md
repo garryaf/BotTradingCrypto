@@ -6,7 +6,7 @@
 
 ---
 
-Dokumen ini melengkapi diagram visual [ERD.mmd](file:///Users/nabilartanabil/SourceCode/AUTO-TRADE-AA/docs/03-diagrams/ERD.mmd) dengan memberikan rincian matematis kardinalitas relasi, aturan integritas referensial (*foreign key behavior*), dan indeks awal basis data.
+Dokumen ini melengkapi diagram visual [ERD.mmd](../../docs/03-diagrams/ERD.mmd) dengan memberikan rincian matematis kardinalitas relasi, aturan integritas referensial (*foreign key behavior*), dan indeks awal basis data.
 
 ---
 
